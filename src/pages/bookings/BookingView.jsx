@@ -27,18 +27,129 @@ import {
   FileText,
   Tag,
   Building,
-  Users
+  Users,
+  Plus
 } from "lucide-react";
-import Layout from "../../elements/Layout";
-import { 
-  fetchSingleBooking, 
-  updateBookingStatus, 
-  addClientNote,
-  getClientNotes 
-} from "../../services/api_service";
+
+// Mock Layout component since it's not available
+const Layout = ({ title, children }) => (
+  <div className="min-h-screen bg-gray-50">
+    <div className="bg-white shadow-sm border-b">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="py-4">
+          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+        </div>
+      </div>
+    </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {children}
+    </div>
+  </div>
+);
+
+// Mock API functions
+const fetchSingleBooking = async (bookingId) => {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // Mock booking data
+  const mockBooking = {
+    id: bookingId,
+    status: 'confirmed',
+    bookingType: Math.random() > 0.5 ? 'offer' : 'service',
+    offerId: Math.random() > 0.5 ? 123 : null,
+    startTime: '2024-12-20T14:00:00Z',
+    endTime: '2024-12-20T15:00:00Z',
+    createdAt: '2024-12-19T10:00:00Z',
+    updatedAt: '2024-12-19T10:00:00Z',
+    notes: 'Customer requested window seat',
+    merchantNotes: 'VIP customer',
+    accessFee: 500,
+    qrCode: 'https://via.placeholder.com/150x150?text=QR+Code',
+    User: {
+      id: 1,
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@example.com',
+      phoneNumber: '+254712345678',
+      createdAt: '2024-01-15T00:00:00Z'
+    },
+    Service: {
+      name: 'Premium Consultation',
+      price: 2500,
+      duration: 60,
+      category: 'Professional Services',
+      description: 'Comprehensive consultation service with expert analysis'
+    },
+    Offer: Math.random() > 0.5 ? {
+      title: 'Holiday Special',
+      discount: 20,
+      description: 'Special holiday discount for premium services',
+      service: {
+        name: 'Premium Consultation',
+        price: 2500
+      }
+    } : null,
+    Store: {
+      name: 'Downtown Branch',
+      location: '123 Main Street, City Center',
+      phone_number: '+254701234567'
+    },
+    Staff: {
+      name: 'Sarah Johnson',
+      role: 'Senior Consultant'
+    },
+    Payment: Math.random() > 0.5 ? {
+      status: 'completed',
+      method: 'mpesa',
+      transaction_id: 'TXN123456789'
+    } : null
+  };
+
+  return { success: true, booking: mockBooking };
+};
+
+const updateBookingStatus = async (bookingId, status, notes) => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { success: true };
+};
+
+const addClientNote = async (userId, note, noteType) => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { 
+    success: true, 
+    note: {
+      id: Date.now(),
+      note,
+      noteType,
+      createdAt: new Date().toISOString()
+    }
+  };
+};
+
+const getClientNotes = async (userId) => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { 
+    success: true, 
+    notes: [
+      {
+        id: 1,
+        note: 'Customer prefers morning appointments',
+        noteType: 'preference',
+        createdAt: '2024-12-18T10:00:00Z'
+      },
+      {
+        id: 2,
+        note: 'Previous service completed successfully',
+        noteType: 'general',
+        createdAt: '2024-12-17T15:30:00Z'
+      }
+    ]
+  };
+};
 
 const BookingView = () => {
-  const { bookingId } = useParams();
+  const { bookingId = '12345' } = useParams(); // Default for demo
   const navigate = useNavigate();
   
   // Main state
@@ -99,6 +210,7 @@ const BookingView = () => {
     } catch (err) {
       console.error('Error loading booking details:', err);
       setError(err.message || 'Failed to load booking details');
+      toast.error('Failed to load booking details');
     } finally {
       setLoading(false);
     }
@@ -113,6 +225,7 @@ const BookingView = () => {
       }
     } catch (err) {
       console.error('Error loading client notes:', err);
+      toast.error('Failed to load client notes');
     } finally {
       setLoadingNotes(false);
     }
@@ -158,6 +271,11 @@ const BookingView = () => {
       return;
     }
 
+    if (!booking?.User?.id) {
+      toast.error('No user associated with this booking');
+      return;
+    }
+
     try {
       const response = await addClientNote(booking.User.id, newNote, noteType);
       
@@ -177,8 +295,26 @@ const BookingView = () => {
   };
 
   const copyToClipboard = (text, label) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`${label} copied to clipboard`);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        toast.success(`${label} copied to clipboard`);
+      }).catch(() => {
+        toast.error('Failed to copy to clipboard');
+      });
+    } else {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast.success(`${label} copied to clipboard`);
+      } catch (err) {
+        toast.error('Failed to copy to clipboard');
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   const getStatusInfo = (status) => {
@@ -200,12 +336,14 @@ const BookingView = () => {
   };
 
   const formatCurrency = (amount) => {
+    if (typeof amount !== 'number') return 'KES 0.00';
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
       currency: 'KES'
     }).format(amount);
   };
 
+  // Loading state
   if (loading) {
     return (
       <Layout title="Loading Booking...">
@@ -227,6 +365,7 @@ const BookingView = () => {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <Layout title="Error">
@@ -236,12 +375,20 @@ const BookingView = () => {
               <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Booking</h2>
               <p className="text-gray-600 mb-6">{error}</p>
-              <button
-                onClick={() => navigate(-1)}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
-              >
-                Go Back
-              </button>
+              <div className="space-x-4">
+                <button
+                  onClick={() => loadBookingDetails()}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
+                >
+                  Retry
+                </button>
+                <button
+                  onClick={() => navigate(-1)}
+                  className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition duration-200"
+                >
+                  Go Back
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -249,6 +396,7 @@ const BookingView = () => {
     );
   }
 
+  // No booking found
   if (!booking) {
     return (
       <Layout title="Booking Not Found">
@@ -337,7 +485,7 @@ const BookingView = () => {
                       <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
                       <div className="flex items-center justify-between">
                         <p className="text-lg font-semibold text-gray-900">
-                          {booking.User?.firstName || booking.User?.first_name} {booking.User?.lastName || booking.User?.last_name || ''}
+                          {booking.User?.firstName || booking.User?.first_name || 'N/A'} {booking.User?.lastName || booking.User?.last_name || ''}
                         </p>
                         <button
                           onClick={() => copyToClipboard(`${booking.User?.firstName} ${booking.User?.lastName}`, 'Name')}

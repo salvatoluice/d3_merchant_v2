@@ -13,10 +13,15 @@ import {
   ThumbsUp,
   AlertCircle,
   CheckCircle,
-  Loader2,
+  Award,
   BarChart3,
   Users,
-  Award
+  Heart,
+  Shield,
+  RefreshCw,
+  X,
+  Lightbulb,
+  Quote
 } from 'lucide-react';
 
 const Reviews = () => {
@@ -29,6 +34,7 @@ const Reviews = () => {
   const [filterRating, setFilterRating] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Review statistics
   const [reviewStats, setReviewStats] = useState({
@@ -67,14 +73,11 @@ const Reviews = () => {
   // Get merchant's store
   const getMerchantStore = async () => {
     try {
-      console.log('🔍 Fetching merchant stores for reviews...');
-      
       if (!checkAuthStatus()) {
         throw new Error('Authentication required');
       }
       
       const token = merchantAuthService.getToken();
-      console.log('🎫 Using token:', token ? 'Found' : 'Not found');
       
       const response = await fetch('http://localhost:4000/api/v1/stores/merchant/my-stores', {
         method: 'GET',
@@ -84,12 +87,7 @@ const Reviews = () => {
         }
       });
 
-      console.log('📡 Response status:', response.status);
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Store fetch failed:', errorText);
-        
         if (response.status === 401) {
           throw new Error('Authentication failed. Your session may have expired.');
         } else if (response.status === 404) {
@@ -100,47 +98,38 @@ const Reviews = () => {
       }
 
       const data = await response.json();
-      console.log('✅ Store data received:', data);
 
       if (data.success && data.stores && data.stores.length > 0) {
         const store = data.stores[0];
-        console.log('🏪 Store found:', store.name);
         setStoreData(store);
         return store.id;
       }
       
       throw new Error('No store found for your merchant account. Please create a store first.');
     } catch (error) {
-      console.error('💥 Error fetching merchant store:', error);
+      console.error('Error fetching merchant store:', error);
       throw error;
     }
   };
 
-  // Fetch reviews for the merchant's store using the enhanced endpoint
+  // Fetch reviews for the merchant's store
   const fetchStoreReviews = async (storeId = null) => {
     try {
-      console.log('📝 Fetching reviews for merchant store:', storeId);
-      
       if (!checkAuthStatus()) {
         return { reviews: [], stats: null };
       }
       
-      // Use the merchant-specific endpoint that gets reviews for the merchant's own store
       const response = await fetch(`http://localhost:4000/api/v1/merchant/reviews`, {
         method: 'GET',
         headers: getAuthHeaders()
       });
 
-      console.log('📡 Merchant reviews response status:', response.status);
-
       if (response.status === 404) {
-        console.log('📭 No reviews found yet - this is normal for new stores');
         return { reviews: [], stats: null };
       }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('❌ Merchant reviews fetch failed:', errorData);
         
         if (response.status === 401) {
           throw new Error('Authentication failed while fetching reviews.');
@@ -150,7 +139,6 @@ const Reviews = () => {
       }
 
       const data = await response.json();
-      console.log('✅ Merchant reviews data received:', data);
       
       return {
         reviews: data.success ? (data.reviews || []) : [],
@@ -158,7 +146,7 @@ const Reviews = () => {
       };
       
     } catch (error) {
-      console.error('💥 Error fetching merchant reviews:', error);
+      console.error('Error fetching merchant reviews:', error);
       throw error;
     }
   };
@@ -184,7 +172,6 @@ const Reviews = () => {
       }
     });
 
-    // Calculate recent trend (last 10 reviews vs previous 10)
     let recentTrend = 'stable';
     if (totalReviews >= 10) {
       const recentReviews = reviewsData.slice(0, 10);
@@ -211,12 +198,10 @@ const Reviews = () => {
   const getFilteredAndSortedReviews = () => {
     let filteredReviews = [...reviews];
 
-    // Filter by rating
     if (filterRating !== 'all') {
       filteredReviews = filteredReviews.filter(review => review.rating === parseInt(filterRating));
     }
 
-    // Sort reviews
     switch (sortBy) {
       case 'newest':
         filteredReviews.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
@@ -266,18 +251,21 @@ const Reviews = () => {
     const percentage = total > 0 ? (count / total) * 100 : 0;
     
     return (
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1 w-12">
-          <span className="text-sm font-medium">{rating}</span>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1 w-16">
+          <span className="text-sm font-medium text-gray-700">{rating}</span>
           <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
         </div>
-        <div className="flex-1 bg-gray-200 rounded-full h-2">
+        <div className="flex-1 bg-gray-200 rounded-full h-3">
           <div 
-            className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
+            className="bg-gradient-to-r from-yellow-400 to-yellow-500 h-3 rounded-full transition-all duration-500"
             style={{ width: `${percentage}%` }}
           />
         </div>
-        <span className="text-sm text-gray-600 w-8">{count}</span>
+        <span className="text-sm font-medium text-gray-900 w-12 text-right">{count}</span>
+        <span className="text-xs text-gray-500 w-12 text-right">
+          {total > 0 ? `${Math.round(percentage)}%` : '0%'}
+        </span>
       </div>
     );
   };
@@ -301,12 +289,12 @@ const Reviews = () => {
     return `${diffInMonths} months ago`;
   };
 
-  // Refresh reviews when filters change
-  const refreshReviews = async () => {
+  // Refresh data
+  const handleRefresh = async () => {
     if (!storeId) return;
     
     try {
-      console.log('🔄 Refreshing reviews with filters:', { filterRating, sortBy });
+      setRefreshing(true);
       
       const { reviews: storeReviews, stats: backendStats } = await fetchStoreReviews(storeId);
       setReviews(storeReviews);
@@ -317,6 +305,8 @@ const Reviews = () => {
     } catch (error) {
       console.error('Error refreshing reviews:', error);
       setError('Failed to refresh reviews. Please try again.');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -327,34 +317,23 @@ const Reviews = () => {
         setLoading(true);
         setError(null);
         
-        console.log('🚀 Starting reviews page data load...');
-        console.log('🔐 Auth status:', merchantAuthService.isAuthenticated());
-        
-        // Check authentication first
         if (!merchantAuthService.isAuthenticated()) {
           throw new Error('Your session has expired. Please log in again.');
         }
         
-        // Get the merchant's store
         const merchantStoreId = await getMerchantStore();
         setStoreId(merchantStoreId);
         
-        // Fetch reviews and stats for the store
         const { reviews: storeReviews, stats: backendStats } = await fetchStoreReviews(merchantStoreId);
         setReviews(storeReviews);
         
-        // Use backend stats if available, otherwise calculate frontend stats
         const stats = backendStats || calculateReviewStats(storeReviews);
         setReviewStats(stats);
         
-        console.log(`📋 Loaded ${storeReviews.length} reviews`);
-        console.log('📊 Review stats:', stats);
-        
       } catch (error) {
-        console.error('💥 Error loading reviews data:', error);
+        console.error('Error loading reviews data:', error);
         setError(error.message);
         
-        // If authentication error, redirect after showing message
         if (error.message.includes('session has expired') || 
             error.message.includes('Authentication failed')) {
           setTimeout(() => {
@@ -366,96 +345,121 @@ const Reviews = () => {
       }
     };
 
-    if (merchantAuthService.isInitialized) {
-      loadData();
-    } else {
-      setTimeout(() => {
-        if (merchantAuthService.isAuthenticated()) {
-          loadData();
-        } else {
-          setLoading(false);
-          setError('Authentication service not available. Please refresh the page.');
-        }
-      }, 1000);
-    }
+    loadData();
   }, []);
 
-  // Refresh reviews when filters change (optional - for real-time filtering)
-  useEffect(() => {
-    if (storeId && reviews.length > 0) {
-      // Only refresh if we want server-side filtering
-      // For now, we'll use client-side filtering which is faster
-      console.log('🔄 Filter changed, using client-side filtering');
-    }
-  }, [filterRating, sortBy, storeId]);
-
-  // Show success message temporarily
-  const showSuccess = (message) => {
-    setSuccess(message);
-    setTimeout(() => setSuccess(null), 3000);
-  };
+  const LoadingSpinner = () => (
+    <div className="flex items-center justify-center py-16">
+      <div className="text-center">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-gray-200 rounded-full"></div>
+          <div className="absolute top-0 left-0 w-16 h-16 border-4 border-indigo-600 rounded-full animate-spin border-t-transparent"></div>
+        </div>
+        <p className="mt-4 text-gray-600 font-medium">Loading customer reviews...</p>
+      </div>
+    </div>
+  );
 
   const filteredReviews = getFilteredAndSortedReviews();
 
   if (loading) {
     return (
-      <Layout title="Customer Reviews">
-        <div className="max-w-7xl mx-auto py-6">
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500 mr-3" />
-            <span className="text-gray-600">Loading customer reviews...</span>
-          </div>
-        </div>
+      <Layout 
+        title="Customer Reviews"
+        subtitle="Track and manage customer feedback"
+      >
+        <LoadingSpinner />
       </Layout>
     );
   }
 
   return (
-    <Layout title="Customer Reviews">
-      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">Customer Reviews</h2>
-            <p className="text-gray-600 mt-1">
-              {storeData ? `Reviews for ${storeData.name}` : 'Manage your store\'s customer feedback'}
-            </p>
-          </div>
-          <div className="mt-4 sm:mt-0 flex items-center gap-3">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Filter className="w-4 h-4" />
-              Filters
-            </button>
-            {reviews.length > 0 && (
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                <Download className="w-4 h-4" />
-                Export
-              </button>
-            )}
-          </div>
-        </div>
-
+    <Layout 
+      title="Customer Reviews"
+      subtitle="Track and manage customer feedback"
+    >
+      <div className="space-y-8">
         {/* Success/Error Messages */}
         {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-            <CheckCircle className="w-5 h-5 text-green-600" />
-            <span className="text-green-800">{success}</span>
+          <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center space-x-3">
+            <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+            <span className="text-green-800 font-medium">{success}</span>
           </div>
         )}
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600" />
-            <span className="text-red-800">{error}</span>
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center space-x-3">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <span className="text-red-800 font-medium">{error}</span>
           </div>
         )}
 
-        {/* Error State */}
+        {/* Header Stats Card */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-8 text-white">
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Customer Reviews</h2>
+                <p className="text-yellow-100">
+                  {storeData ? `Reviews for ${storeData.name}` : 'Monitor your customer feedback'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-20 text-white font-medium rounded-xl hover:bg-opacity-30 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+                {reviews.length > 0 && (
+                  <button className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-20 text-white font-medium rounded-xl hover:bg-opacity-30 transition-colors">
+                    <Download className="h-4 w-4" />
+                    Export
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="rounded-lg bg-white bg-opacity-10 p-4">
+                <div className="flex items-center space-x-2">
+                  <MessageSquare className="h-5 w-5 text-yellow-200" />
+                  <div className="text-2xl font-bold">{reviewStats.totalReviews}</div>
+                </div>
+                <div className="text-sm text-yellow-100">Total Reviews</div>
+              </div>
+              <div className="rounded-lg bg-white bg-opacity-10 p-4">
+                <div className="flex items-center space-x-2">
+                  <Star className="h-5 w-5 text-yellow-200" />
+                  <div className="text-2xl font-bold">{reviewStats.averageRating}</div>
+                </div>
+                <div className="text-sm text-yellow-100">Average Rating</div>
+              </div>
+              <div className="rounded-lg bg-white bg-opacity-10 p-4">
+                <div className="flex items-center space-x-2">
+                  <Award className="h-5 w-5 text-yellow-200" />
+                  <div className="text-2xl font-bold">{reviewStats.ratingDistribution[5]}</div>
+                </div>
+                <div className="text-sm text-yellow-100">5-Star Reviews</div>
+              </div>
+              <div className="rounded-lg bg-white bg-opacity-10 p-4">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="h-5 w-5 text-yellow-200" />
+                  <div className="text-lg font-bold capitalize">{reviewStats.recentTrend}</div>
+                </div>
+                <div className="text-sm text-yellow-100">Recent Trend</div>
+              </div>
+            </div>
+          </div>
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white bg-opacity-10"></div>
+          <div className="absolute bottom-0 left-0 -mb-8 -ml-8 h-32 w-32 rounded-full bg-white bg-opacity-5"></div>
+        </div>
+
         {error ? (
-          <div className="bg-white rounded-xl shadow-sm border border-red-200">
+          /* Error State */
+          <div className="bg-white rounded-2xl shadow-sm border border-red-200 overflow-hidden">
             <div className="p-12 text-center">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertCircle className="w-8 h-8 text-red-600" />
@@ -469,8 +473,8 @@ const Reviews = () => {
                     You need to create a store before viewing customer reviews.
                   </p>
                   <button
-                    onClick={() => window.location.href = '/dashboard/stores'}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                    onClick={() => window.location.href = '/dashboard/account'}
+                    className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors"
                   >
                     Create Your Store
                   </button>
@@ -482,7 +486,7 @@ const Reviews = () => {
                   </p>
                   <button
                     onClick={() => merchantAuthService.logout()}
-                    className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors"
+                    className="bg-red-600 text-white px-6 py-3 rounded-xl hover:bg-red-700 transition-colors"
                   >
                     Go to Login
                   </button>
@@ -490,7 +494,7 @@ const Reviews = () => {
               ) : (
                 <button
                   onClick={() => window.location.reload()}
-                  className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                  className="bg-gray-600 text-white px-6 py-3 rounded-xl hover:bg-gray-700 transition-colors"
                 >
                   Try Again
                 </button>
@@ -499,89 +503,21 @@ const Reviews = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Review Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              {/* Total Reviews */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Reviews</p>
-                    <p className="text-3xl font-bold text-gray-900">{reviewStats.totalReviews}</p>
-                  </div>
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <MessageSquare className="w-6 h-6 text-blue-600" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Average Rating */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Average Rating</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-3xl font-bold text-gray-900">{reviewStats.averageRating}</p>
-                      <div className="flex">
-                        {renderStars(reviewStats.averageRating, 'small')}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-yellow-100 rounded-lg">
-                    <Star className="w-6 h-6 text-yellow-600" />
-                  </div>
-                </div>
-              </div>
-
-              {/* 5-Star Reviews */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">5-Star Reviews</p>
-                    <p className="text-3xl font-bold text-gray-900">{reviewStats.ratingDistribution[5]}</p>
-                    <p className="text-sm text-gray-500">
-                      {reviewStats.totalReviews > 0 
-                        ? `${Math.round((reviewStats.ratingDistribution[5] / reviewStats.totalReviews) * 100)}%` 
-                        : '0%'
-                      }
-                    </p>
-                  </div>
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <Award className="w-6 h-6 text-green-600" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Trend */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Recent Trend</p>
-                    <p className={`text-lg font-semibold ${
-                      reviewStats.recentTrend === 'improving' ? 'text-green-600' : 
-                      reviewStats.recentTrend === 'declining' ? 'text-red-600' : 'text-gray-600'
-                    }`}>
-                      {reviewStats.recentTrend === 'improving' ? '📈 Improving' :
-                       reviewStats.recentTrend === 'declining' ? '📉 Declining' : '➡️ Stable'}
-                    </p>
-                  </div>
-                  <div className={`p-3 rounded-lg ${
-                    reviewStats.recentTrend === 'improving' ? 'bg-green-100' : 
-                    reviewStats.recentTrend === 'declining' ? 'bg-red-100' : 'bg-gray-100'
-                  }`}>
-                    <TrendingUp className={`w-6 h-6 ${
-                      reviewStats.recentTrend === 'improving' ? 'text-green-600' : 
-                      reviewStats.recentTrend === 'declining' ? 'text-red-600' : 'text-gray-600'
-                    }`} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Rating Distribution */}
             {reviewStats.totalReviews > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Rating Distribution</h3>
-                <div className="space-y-3">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-10 w-10 rounded-lg bg-yellow-100 flex items-center justify-center">
+                      <BarChart3 className="h-5 w-5 text-yellow-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Rating Distribution</h3>
+                      <p className="text-sm text-gray-600">Breakdown of customer ratings</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
                   {[5, 4, 3, 2, 1].map(rating => (
                     <div key={rating}>
                       {renderRatingBar(rating, reviewStats.ratingDistribution[rating], reviewStats.totalReviews)}
@@ -592,57 +528,78 @@ const Reviews = () => {
             )}
 
             {/* Filters */}
-            {showFilters && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Filter & Sort</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Rating</label>
-                    <select
-                      value={filterRating}
-                      onChange={(e) => setFilterRating(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="all">All Ratings</option>
-                      <option value="5">5 Stars</option>
-                      <option value="4">4 Stars</option>
-                      <option value="3">3 Stars</option>
-                      <option value="2">2 Stars</option>
-                      <option value="1">1 Star</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Sort by</label>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="newest">Newest First</option>
-                      <option value="oldest">Oldest First</option>
-                      <option value="highest">Highest Rating</option>
-                      <option value="lowest">Lowest Rating</option>
-                    </select>
-                  </div>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">Filter & Sort Reviews</h3>
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    <Filter className="w-4 h-4" />
+                    {showFilters ? 'Hide' : 'Show'} Filters
+                  </button>
                 </div>
               </div>
-            )}
+              
+              {showFilters && (
+                <div className="p-6 bg-gray-50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Filter by Rating</label>
+                      <select
+                        value={filterRating}
+                        onChange={(e) => setFilterRating(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors"
+                      >
+                        <option value="all">All Ratings</option>
+                        <option value="5">5 Stars</option>
+                        <option value="4">4 Stars</option>
+                        <option value="3">3 Stars</option>
+                        <option value="2">2 Stars</option>
+                        <option value="1">1 Star</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Sort by</label>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors"
+                      >
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="highest">Highest Rating</option>
+                        <option value="lowest">Lowest Rating</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Reviews List */}
-            <div className="bg-white rounded-xl border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Customer Reviews 
-                    {filterRating !== 'all' && (
-                      <span className="ml-2 text-sm font-normal text-gray-600">
-                        ({filterRating} star{filterRating !== '1' ? 's' : ''})
-                      </span>
-                    )}
-                  </h3>
-                  <span className="text-sm text-gray-500">
-                    Showing {filteredReviews.length} of {reviews.length} reviews
-                  </span>
+                  <div className="flex items-center space-x-3">
+                    <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                      <MessageSquare className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Customer Reviews 
+                        {filterRating !== 'all' && (
+                          <span className="ml-2 text-sm font-normal text-gray-600">
+                            ({filterRating} star{filterRating !== '1' ? 's' : ''})
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Showing {filteredReviews.length} of {reviews.length} reviews
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -650,16 +607,17 @@ const Reviews = () => {
                 <div className="divide-y divide-gray-200">
                   {filteredReviews.map((review) => (
                     <div key={review.id} className="p-6 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-start gap-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-4 flex-1">
                           {/* Customer Avatar */}
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-lg">
+                          <div className="w-14 h-14 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
                             {(review.User?.firstName || review.user?.first_name || review.customerName || 'A').charAt(0).toUpperCase()}
                           </div>
                           
-                          {/* Customer Info */}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
+                          {/* Review Content */}
+                          <div className="flex-1 min-w-0">
+                            {/* Customer Info */}
+                            <div className="flex items-center gap-3 mb-3">
                               <h4 className="font-semibold text-gray-900">
                                 {review.User?.firstName 
                                   ? `${review.User.firstName} ${review.User.lastName?.charAt(0) || ''}.`
@@ -668,16 +626,17 @@ const Reviews = () => {
                                   : review.customerName || review.name || 'Anonymous Customer'
                                 }
                               </h4>
-                              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
-                                {review.User ? 'Verified Customer' : 'Customer'}
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <Shield className="h-3 w-3 mr-1" />
+                                {review.User ? 'Verified' : 'Customer'}
                               </span>
                             </div>
                             
                             {/* Rating and Date */}
-                            <div className="flex items-center gap-4 mb-3">
+                            <div className="flex items-center gap-4 mb-4">
                               <div className="flex items-center gap-2">
                                 {renderStars(review.rating)}
-                                <span className="font-medium text-gray-900">{review.rating}/5</span>
+                                <span className="font-semibold text-gray-900">{review.rating}/5</span>
                               </div>
                               <div className="flex items-center gap-1 text-sm text-gray-500">
                                 <Calendar className="w-4 h-4" />
@@ -694,10 +653,13 @@ const Reviews = () => {
                             </div>
 
                             {/* Review Text */}
-                            <div className="bg-gray-50 rounded-lg p-4">
-                              <p className="text-gray-700 leading-relaxed">
-                                {review.text || review.comment || 'No comment provided.'}
-                              </p>
+                            <div className="relative">
+                              <Quote className="absolute top-0 left-0 w-4 h-4 text-gray-300 -translate-x-1 -translate-y-1" />
+                              <div className="bg-gray-50 rounded-xl p-4 ml-3">
+                                <p className="text-gray-700 leading-relaxed">
+                                  {review.text || review.comment || 'No comment provided.'}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -705,7 +667,7 @@ const Reviews = () => {
                         {/* Quick Actions */}
                         <div className="flex items-center gap-2 ml-4">
                           <button
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                             title="View customer profile"
                           >
                             <Eye className="w-4 h-4" />
@@ -714,7 +676,7 @@ const Reviews = () => {
                             className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                             title="Helpful review"
                           >
-                            <ThumbsUp className="w-4 h-4" />
+                            <Heart className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -729,9 +691,11 @@ const Reviews = () => {
                 </div>
               ) : reviews.length > 0 ? (
                 <div className="p-12 text-center">
-                  <Filter className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Filter className="w-8 h-8 text-gray-400" />
+                  </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No reviews match your filters</h3>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-gray-600 mb-6">
                     Try adjusting your filter criteria to see more reviews.
                   </p>
                   <button
@@ -739,7 +703,7 @@ const Reviews = () => {
                       setFilterRating('all');
                       setSortBy('newest');
                     }}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"
                   >
                     Clear Filters
                   </button>
@@ -750,7 +714,7 @@ const Reviews = () => {
                     <MessageSquare className="w-8 h-8 text-gray-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No reviews yet</h3>
-                  <p className="text-gray-600 mb-6">
+                  <p className="text-gray-600 mb-8">
                     {storeData ? 
                       `Customers haven't left any reviews for ${storeData.name} yet. Reviews will appear here once customers start sharing their experiences.` :
                       'Customer reviews will appear here once they start sharing their experiences with your store.'
@@ -758,13 +722,30 @@ const Reviews = () => {
                   </p>
                   
                   {/* Tips for getting reviews */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
-                    <h4 className="font-semibold text-blue-900 mb-3">💡 Tips to Get More Reviews</h4>
-                    <ul className="text-blue-800 text-sm space-y-2 text-left">
-                      <li>• Provide excellent customer service</li>
-                      <li>• Follow up with customers after purchases</li>
-                      <li>• Respond to existing reviews promptly</li>
-                      <li>• Encourage satisfied customers to share feedback</li>
+                  <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 max-w-md mx-auto">
+                    <div className="flex items-center justify-center mb-4">
+                      <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                        <Lightbulb className="h-6 w-6 text-blue-600" />
+                      </div>
+                    </div>
+                    <h4 className="font-semibold text-blue-900 mb-4">Tips to Get More Reviews</h4>
+                    <ul className="text-blue-800 text-sm space-y-3 text-left">
+                      <li className="flex items-start space-x-2">
+                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <span>Provide exceptional customer service</span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <span>Follow up with customers after purchases</span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <span>Respond to existing reviews promptly</span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <span>Encourage satisfied customers to share feedback</span>
+                      </li>
                     </ul>
                   </div>
                 </div>

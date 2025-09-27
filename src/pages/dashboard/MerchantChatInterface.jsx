@@ -1,6 +1,6 @@
-// pages/MerchantChatInterface.jsx - FIXED: Merchant responding as Store to Customers
+// pages/MerchantChatInterface.jsx - Design Improvements
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, User, Clock, Check, CheckCheck, AlertCircle, Star, Loader2, MessageCircle, RefreshCw, Store, Users } from 'lucide-react';
+import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, User, Clock, Check, CheckCheck, AlertCircle, Star, Loader2, MessageCircle, RefreshCw, Store, Users, Plus, Filter } from 'lucide-react';
 import Layout from '../../elements/Layout';
 import merchantChatService from '../services/merchantChatService';
 import merchantAuthService from '../../services/merchantAuthService';
@@ -17,18 +17,17 @@ const MerchantChatInterface = () => {
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all');
   const messagesEndRef = useRef(null);
 
   // Enhanced merchant initialization
   useEffect(() => {
     const initializeMerchant = async () => {
       try {
-        console.log('🏪 Starting MERCHANT initialization for store communication...');
+        setLoading(true);
         
         if (!merchantAuthService.isAuthenticated()) {
-          console.log('🏪 Merchant not authenticated, redirecting...');
           setError('Please log in as a merchant to access store chat');
-          setLoading(false);
           setTimeout(() => {
             window.location.href = '/accounts/sign-in';
           }, 2000);
@@ -36,41 +35,31 @@ const MerchantChatInterface = () => {
         }
 
         const merchantToken = merchantAuthService.getToken();
-        console.log('🏪 Merchant token check:', merchantToken ? `Found (${merchantToken.substring(0, 20)}...)` : 'NOT FOUND');
-
         if (!merchantToken) {
           setError('No valid merchant session found. Please log in as a merchant.');
-          setLoading(false);
           return;
         }
 
         // Verify token is merchant type
         try {
           const tokenPayload = JSON.parse(atob(merchantToken.split('.')[1]));
-          console.log('🏪 Token payload:', tokenPayload);
           
           if (tokenPayload.type !== 'merchant') {
-            console.log('🏪 Token is not merchant type:', tokenPayload.type);
             setError('Invalid session type. Please log in as a merchant.');
             merchantAuthService.logout();
             return;
           }
         } catch (tokenError) {
-          console.error('🏪 Error parsing token:', tokenError);
           setError('Invalid authentication token. Please log in again.');
           merchantAuthService.logout();
           return;
         }
 
-        console.log('🏪 Getting merchant profile...');
         const profileResponse = await merchantAuthService.getCurrentMerchantProfile();
         
-        console.log('🏪 Merchant profile response:', profileResponse);
-
         if (profileResponse && profileResponse.success && profileResponse.merchantProfile) {
           const merchantProfile = profileResponse.merchantProfile;
           
-          // Create merchant user object for store communication
           const merchantUserData = {
             id: merchantProfile.id || merchantProfile.merchant_id,
             name: `${merchantProfile.first_name || 'Merchant'} ${merchantProfile.last_name || ''}`.trim(),
@@ -83,7 +72,6 @@ const MerchantChatInterface = () => {
             storeName: merchantProfile.store?.name,
             merchantId: merchantProfile.id || merchantProfile.merchant_id,
             merchantProfile: merchantProfile,
-            // Store information for proper representation
             storeInfo: merchantProfile.store ? {
               id: merchantProfile.store.id,
               name: merchantProfile.store.name,
@@ -92,19 +80,15 @@ const MerchantChatInterface = () => {
             } : null
           };
 
-          console.log('✅ Merchant user for store communication initialized:', merchantUserData);
           setUser(merchantUserData);
           localStorage.setItem('currentMerchant', JSON.stringify(merchantUserData));
           
         } else {
-          console.log('🏪 Profile API failed, trying stored merchant data...');
-          
           const storedMerchant = localStorage.getItem('currentMerchant');
           if (storedMerchant) {
             try {
               const parsedMerchant = JSON.parse(storedMerchant);
               if (parsedMerchant && parsedMerchant.id && parsedMerchant.userType === 'merchant') {
-                console.log('✅ Merchant restored from localStorage:', parsedMerchant);
                 setUser(parsedMerchant);
                 return;
               }
@@ -113,9 +97,6 @@ const MerchantChatInterface = () => {
             }
           }
 
-          // Construct merchant from token if profile fails
-          console.log('🏪 Constructing merchant from token...');
-          
           const token = merchantAuthService.getToken();
           if (token) {
             try {
@@ -133,7 +114,6 @@ const MerchantChatInterface = () => {
                 };
                 
                 if (basicMerchant.id) {
-                  console.log('✅ Basic merchant constructed from token:', basicMerchant);
                   setUser(basicMerchant);
                   localStorage.setItem('currentMerchant', JSON.stringify(basicMerchant));
                   return;
@@ -150,7 +130,7 @@ const MerchantChatInterface = () => {
         }
 
       } catch (error) {
-        console.error('🏪 Error in merchant initialization:', error);
+        console.error('Error in merchant initialization:', error);
         setError('Failed to initialize merchant store chat: ' + error.message);
         
         if (error.message?.includes('Authentication') || 
@@ -183,35 +163,17 @@ const MerchantChatInterface = () => {
     connectionError
   } = useSocket(user && user.id && user.userType === 'merchant' ? user : null);
 
-  console.log('🔌 Merchant socket status:', { 
-    isConnected, 
-    connectionError, 
-    merchantReady: !!user?.id,
-    userType: user?.userType,
-    merchantId: user?.merchantId
-  });
-
-  // FIXED: Socket event handlers for merchant handling customer↔store messages
+  // Socket event handlers for merchant handling customer↔store messages
   useEffect(() => {
     if (!socket || !user || !isConnected || user.userType !== 'merchant') {
-      console.log('🏪 Skipping socket handlers - merchant not ready');
       return;
     }
   
-    console.log('🔌 Setting up MERCHANT socket handlers for customer↔store communication');
-  
-    // FIXED: Handle customer messages to merchant's stores
     const handleCustomerToStoreMessage = (messageData) => {
-      console.log('📨 MERCHANT received customer→store message:', messageData);
-      
-      // Only handle messages FROM customers TO this merchant's stores
       if ((messageData.sender === 'user' || messageData.sender === 'customer' || messageData.sender_type === 'user')) {
         
-        // Add message if it's for the currently selected conversation
         if (selectedCustomer && messageData.conversationId === selectedCustomer.conversationId) {
-          console.log('✅ Adding customer→store message to merchant interface');
           setMessages(prev => {
-            // Check if message already exists to prevent duplicates
             const exists = prev.find(msg => msg.id === messageData.id);
             if (exists) return prev;
             
@@ -220,12 +182,9 @@ const MerchantChatInterface = () => {
           scrollToBottom();
         }
         
-        // CRITICAL: Update customer list with new message
         setCustomers(prev => {
-          console.log('🔄 Updating customer list with new message');
           return prev.map(customer => {
             if (customer.id === messageData.conversationId) {
-              console.log('✅ Updating customer conversation:', customer.customer?.name);
               return {
                 ...customer,
                 lastMessage: messageData.text || messageData.content,
@@ -236,32 +195,19 @@ const MerchantChatInterface = () => {
             return customer;
           });
         });
-  
-        // Force UI refresh
+
         setTimeout(() => {
-          console.log('🔄 Forcing customer list refresh');
-          // Trigger a re-render by updating a timestamp
           setRefreshing(true);
           setTimeout(() => setRefreshing(false), 100);
         }, 100);
       }
     };
-
     
-  
-    // Handle general new messages but filter for customer→store
     const handleNewMessage = (messageData) => {
-      console.log('📨 MERCHANT received general message:', messageData);
-      
-      // Call the customer-to-store handler for consistency
       handleCustomerToStoreMessage(messageData);
     };
-  
-    // Handle new customer↔store conversation notifications
+
     const handleNewCustomerStoreConversation = (conversationData) => {
-      console.log('🆕 MERCHANT received new customer→store conversation:', conversationData);
-      
-      // Only handle if this conversation is for this merchant's store
       if (conversationData.store?.merchantId === user.merchantId || 
           conversationData.merchantId === user.merchantId) {
         
@@ -287,33 +233,25 @@ const MerchantChatInterface = () => {
           unreadCount: conversationData.initialMessage ? 1 : 0,
           online: true
         };
-  
-        console.log('✅ Adding new customer conversation:', newCustomerChat);
+
         setCustomers(prev => [newCustomerChat, ...prev]);
       }
     };
-  
-    // Handle message status updates
+
     const handleMessageStatusUpdate = ({ messageId, status }) => {
-      console.log('📝 MERCHANT received message status update:', messageId, status);
       setMessages(prev => prev.map(msg => 
         msg.id === messageId ? { ...msg, status } : msg
       ));
     };
-  
-    // Handle messages read events
+
     const handleMessagesRead = ({ readBy, chatId }) => {
-      console.log('📖 Messages read by customer:', readBy, 'in chat:', chatId);
-      
       if (selectedCustomer && chatId === selectedCustomer.conversationId) {
-        // Mark store messages as read
         setMessages(prev => prev.map(msg => 
           msg.sender === 'store' ? { ...msg, status: 'read' } : msg
         ));
       }
     };
-  
-    // Subscribe to merchant store events
+
     const unsubscribers = [
       on('new_customer_to_store_message', handleCustomerToStoreMessage),
       on('new_message', handleNewMessage),
@@ -321,16 +259,15 @@ const MerchantChatInterface = () => {
       on('message_status_update', handleMessageStatusUpdate),
       on('messages_read', handleMessagesRead)
     ];
-  
+
     return () => {
-      console.log('🧹 Cleaning up merchant store socket handlers');
       unsubscribers.forEach(unsub => unsub && unsub());
     };
   }, [socket, user, isConnected, on, selectedCustomer, setCustomers, setMessages]);
+
   // Load customer↔store conversations for merchant
   const loadConversations = async () => {
     if (!user || !user.id || user.userType !== 'merchant') {
-      console.log('🏪 Cannot load conversations - merchant not ready');
       setError('Merchant user not initialized');
       return;
     }
@@ -339,25 +276,19 @@ const MerchantChatInterface = () => {
       setLoading(true);
       setError(null);
       
-      console.log('🏪 Loading customer↔store conversations for merchant:', user.id);
-      
       if (!merchantAuthService.isAuthenticated()) {
         throw new Error('Merchant authentication expired. Please log in again.');
       }
 
       const response = await merchantChatService.getCustomerConversations();
-      console.log('🏪 Customer↔store conversations response:', response);
       
       if (response && response.success) {
-        console.log('🏪 Setting customer↔store conversations:', response.data);
         setCustomers(response.data || []);
-        console.log(`✅ Loaded ${(response.data || []).length} customer↔store conversations`);
       } else {
-        console.error('🏪 API returned success=false:', response?.message);
         setError(response?.message || 'Failed to load customer↔store conversations');
       }
     } catch (error) {
-      console.error('🏪 Error loading conversations:', error);
+      console.error('Error loading conversations:', error);
       
       if (error.message?.includes('Authentication') || 
           error.message?.includes('401') || 
@@ -377,7 +308,6 @@ const MerchantChatInterface = () => {
   // Load conversations when merchant is ready and connected
   useEffect(() => {
     if (user && user.id && user.userType === 'merchant' && isConnected) {
-      console.log('🏪 Merchant and socket ready for store chat, loading conversations...');
       loadConversations();
     }
   }, [user, isConnected]);
@@ -400,10 +330,8 @@ const MerchantChatInterface = () => {
   const loadMessages = async (conversationId) => {
     try {
       setError(null);
-      console.log('📨 Loading customer↔store messages for conversation:', conversationId);
       
       const response = await merchantChatService.getCustomerMessages(conversationId);
-      console.log('📨 Customer↔store messages response:', response);
       
       if (response.success) {
         setMessages(response.data);
@@ -412,14 +340,12 @@ const MerchantChatInterface = () => {
         setError('Failed to load messages');
       }
     } catch (error) {
-      console.error('❌ Failed to load messages:', error);
+      console.error('Failed to load messages:', error);
       setError('Failed to load messages');
     }
   };
 
   const handleCustomerSelect = (customer) => {
-    console.log('👤 Merchant selecting customer conversation:', customer.customer?.name);
-    
     if (selectedCustomer) {
       leaveConversation(selectedCustomer.conversationId);
     }
@@ -449,27 +375,6 @@ const MerchantChatInterface = () => {
     }
   };
 
-
-// Add this debug button to MerchantChatInterface.jsx
-<button
-  onClick={async () => {
-    console.log('🔍 DEBUGGING API CALLS');
-    try {
-      console.log('Token:', merchantAuthService.getToken()?.substring(0, 20) + '...');
-      const response = await merchantChatService.getCustomerConversations();
-      console.log('Direct API response:', response);
-      setCustomers(response.data || []);
-    } catch (error) {
-      console.error('API Debug Error:', error);
-      setError('API Debug: ' + error.message);
-    }
-  }}
-  className="px-3 py-1 text-sm bg-purple-500 text-white rounded-lg hover:bg-purple-600"
->
-  🔍 Debug API
-</button>
-
-  // FIXED: Send message as store to customer
   const handleSendMessage = async () => {
     if (!message.trim() || !selectedCustomer || sendingMessage) return;
 
@@ -480,14 +385,6 @@ const MerchantChatInterface = () => {
       setError(null);
       setMessage('');
 
-      console.log('📤 MERCHANT sending message AS STORE to customer:', {
-        chatId: selectedCustomer.conversationId,
-        customer: selectedCustomer.customer?.name,
-        store: user.storeName || 'Store',
-        content: messageText,
-        messageType: 'store_to_customer'
-      });
-
       const response = await merchantChatService.replyToCustomer(
         selectedCustomer.conversationId,
         messageText,
@@ -495,13 +392,10 @@ const MerchantChatInterface = () => {
       );
 
       if (response.success) {
-        console.log('✅ Store message to customer sent successfully');
-        
-        // Add the message to the merchant's view as a store message
         const newMessage = {
           id: response.data.id || `temp-${Date.now()}`,
           text: messageText,
-          sender: 'store', // FIXED: Message is from store, not merchant
+          sender: 'store',
           sender_type: 'store',
           senderInfo: {
             id: user.storeId || user.id,
@@ -518,7 +412,6 @@ const MerchantChatInterface = () => {
         setMessages(prev => [...prev, newMessage]);
         scrollToBottom();
         
-        // Update customer list
         setCustomers(prev => prev.map(customer =>
           customer.id === selectedCustomer.conversationId
             ? {
@@ -532,7 +425,7 @@ const MerchantChatInterface = () => {
         throw new Error(response.message || 'Failed to send store message');
       }
     } catch (error) {
-      console.error('❌ Failed to send store message to customer:', error);
+      console.error('Failed to send store message to customer:', error);
       setError(`Failed to send store message: ${error.message}`);
       setMessage(messageText);
     } finally {
@@ -556,9 +449,15 @@ const MerchantChatInterface = () => {
     setMessages([]);
   };
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false
-  );
+  const filteredCustomers = customers.filter(customer => {
+    const matchesSearch = customer.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
+    const matchesFilter = filterStatus === 'all' || 
+      (filterStatus === 'unread' && customer.unreadCount > 0) ||
+      (filterStatus === 'vip' && customer.customer?.priority === 'vip') ||
+      (filterStatus === 'online' && isUserOnline(customer.customer?.id));
+    
+    return matchesSearch && matchesFilter;
+  });
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -567,16 +466,12 @@ const MerchantChatInterface = () => {
     }
   };
 
-  // Store quick responses for merchants
   const quickResponses = [
-    "Thank you for contacting our store! How can we assist you today?",
-    "Your order is being processed at our store and will be ready soon.",
-    "We have that item in stock at our store. Would you like us to reserve it for you?",
-    "Let me check that for you in our store inventory and get back to you shortly.",
-    "Is there anything else our store can help you with today?",
-    "Our store hours are Monday to Friday, 9 AM to 6 PM.",
-    "You can visit our store or we can arrange delivery for you.",
-    "Our store offers free delivery for orders over KES 2,000."
+    "Thank you for contacting our store!",
+    "Your order is being processed",
+    "We have that item in stock",
+    "Let me check that for you",
+    "Is there anything else we can help with?"
   ];
 
   const handleQuickResponse = (response) => {
@@ -617,7 +512,7 @@ const MerchantChatInterface = () => {
       <Layout>
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
             <p className="text-gray-600">Loading merchant store chat...</p>
             {user && (
               <div className="text-sm text-gray-500 mt-2">
@@ -647,7 +542,7 @@ const MerchantChatInterface = () => {
             </p>
             <button
               onClick={() => window.location.href = '/accounts/sign-in'}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               Go to Merchant Login
             </button>
@@ -658,76 +553,99 @@ const MerchantChatInterface = () => {
   }
 
   return (
-    <Layout>
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" style={{ height: '700px' }}>
-        {/* Enhanced Header */}
-        <div className="bg-white p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+    <Layout
+      title="Customer Chat"
+      subtitle={`Store customer support - ${customers.length} conversations`}
+      showSearch={false}
+    >
+      {/* Header Card */}
+      <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+              <Store className="w-6 h-6 text-blue-600" />
+            </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                <Store className="w-5 h-5 text-blue-500" />
-                Store Customer Chat
+              <h2 className="text-lg font-semibold text-gray-900">
+                Store Customer Support
               </h2>
               <div className="flex items-center gap-4 mt-1">
-                <p className="text-sm text-gray-500">Managing conversations for {user?.storeName || 'your store'}</p>
+                <p className="text-sm text-gray-600">
+                  Managing conversations for {user?.storeName || 'your store'}
+                </p>
                 <ConnectionStatus />
-                {user && (
-                  <span className="text-xs text-gray-400">
-                    {user.storeName ? `Store: ${user.storeName}` : `Merchant: ${user.name}`}
-                  </span>
-                )}
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              {totalUnreadCount > 0 && (
-                <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4 text-orange-500" />
-                  <span className="text-sm font-medium text-gray-700">
-                    {totalUnreadCount} unread customer message{totalUnreadCount > 1 ? 's' : ''}
-                  </span>
-                </div>
-              )}
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing || !user?.id || user?.userType !== 'merchant'}
-                className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-            </div>
           </div>
-          {error && (
-            <div className="mt-2 p-2 bg-red-100 border border-red-300 text-red-700 rounded text-sm">
-              {error}
-              <button 
-                onClick={() => setError(null)}
-                className="ml-2 text-red-800 hover:text-red-900"
-              >
-                ×
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {totalUnreadCount > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-orange-600" />
+                <span className="text-sm font-medium text-orange-800">
+                  {totalUnreadCount} unread
+                </span>
+              </div>
+            )}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing || !user?.id || user?.userType !== 'merchant'}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
         </div>
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              {error}
+            </div>
+            <button 
+              onClick={() => setError(null)}
+              className="text-red-800 hover:text-red-900"
+            >
+              ×
+            </button>
+          </div>
+        )}
+      </div>
 
-        <div className="flex" style={{ height: 'calc(100% - 80px)' }}>
+      {/* Main Chat Interface */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm" style={{ height: '700px' }}>
+        <div className="flex h-full">
           {/* Customer List Sidebar */}
           <div className={`${selectedCustomer
               ? 'hidden lg:flex'
               : 'flex'
-            } w-full lg:w-80 flex-col bg-gray-50 border-r border-gray-200`}>
+            } w-full lg:w-96 flex-col bg-gray-50`}>
             
-            {/* Search */}
-            <div className="p-4 bg-white border-b border-gray-200">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search customers..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                />
+            {/* Search and Filter */}
+            <div className="p-4 bg-white border-b border-gray-100">
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search customers..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  >
+                    <option value="all">All Customers</option>
+                    <option value="unread">Unread ({customers.filter(c => c.unreadCount > 0).length})</option>
+                    <option value="vip">VIP Customers</option>
+                    <option value="online">Online Now</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -737,11 +655,12 @@ const MerchantChatInterface = () => {
                 <div className="flex items-center justify-center h-32 text-gray-500">
                   <div className="text-center">
                     <Users className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p className="font-medium">No customer conversations</p>
-                    <p className="text-sm">Customer messages will appear here</p>
-                    {!isConnected && (
-                      <p className="text-xs text-red-500 mt-1">Store offline</p>
-                    )}
+                    <p className="font-medium">
+                      {searchTerm || filterStatus !== 'all' ? 'No matching customers' : 'No customer conversations'}
+                    </p>
+                    <p className="text-sm">
+                      {searchTerm || filterStatus !== 'all' ? 'Try adjusting your search or filters' : 'Customer messages will appear here'}
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -749,14 +668,14 @@ const MerchantChatInterface = () => {
                   <div
                     key={customer.id}
                     onClick={() => handleCustomerSelect(customer)}
-                    className={`flex items-start p-4 hover:bg-white cursor-pointer transition-colors border-b border-gray-100 ${selectedCustomer?.conversationId === customer.id ? 'bg-white border-r-2 border-blue-500' : ''
+                    className={`flex items-start p-3 hover:bg-white cursor-pointer transition-all border-b border-gray-100 ${selectedCustomer?.conversationId === customer.id ? 'bg-white border-r-2 border-r-blue-500' : ''
                       }`}
                   >
-                    <div className="relative">
+                    <div className="relative flex-shrink-0">
                       <img
                         src={customer.customer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(customer.customer?.name || 'Customer')}&background=random`}
                         alt={customer.customer?.name || 'Customer'}
-                        className="w-12 h-12 rounded-full object-cover"
+                        className="w-10 h-10 rounded-full object-cover"
                       />
                       {isUserOnline(customer.customer?.id) && (
                         <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
@@ -769,25 +688,22 @@ const MerchantChatInterface = () => {
                     </div>
                     <div className="ml-3 flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold text-gray-900 truncate">{customer.customer?.name || 'Unknown'}</h3>
-                        <div className="flex items-center space-x-1">
-                          <span className="text-xs text-gray-500">{customer.lastMessageTime}</span>
+                        <h3 className="font-semibold text-gray-900 truncate text-sm">{customer.customer?.name || 'Unknown'}</h3>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-xs text-gray-400">{customer.lastMessageTime}</span>
                           {customer.unreadCount > 0 && (
-                            <span className="bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
                               {customer.unreadCount}
                             </span>
                           )}
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600 truncate mb-2">{customer.lastMessage}</p>
+                      <p className="text-sm text-gray-600 truncate mb-1">{customer.lastMessage}</p>
                       <div className="flex items-center justify-between text-xs text-gray-400">
-                        <div className="flex items-center space-x-3">
-                          <span>Customer since {customer.customer?.customerSince || 'Unknown'}</span>
-                          <span>{customer.customer?.orderCount || 0} orders</span>
-                        </div>
+                        <span>{customer.customer?.orderCount || 0} orders</span>
                         <div className="flex items-center gap-1">
                           <Store className="w-3 h-3" />
-                          <span>{customer.store?.name || 'Store'}</span>
+                          <span className="truncate max-w-20">{customer.store?.name || 'Store'}</span>
                         </div>
                       </div>
                     </div>
@@ -805,11 +721,11 @@ const MerchantChatInterface = () => {
             {selectedCustomer ? (
               <>
                 {/* Customer Chat Header */}
-                <div className="bg-white p-4 border-b border-gray-200 flex items-center justify-between">
+                <div className="bg-white p-4 border-b border-gray-100 flex items-center justify-between">
                   <div className="flex items-center">
                     <button
                       onClick={handleBackToSidebar}
-                      className="lg:hidden mr-3 p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="lg:hidden mr-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
                     >
                       <ArrowLeft className="w-5 h-5 text-gray-600" />
                     </button>
@@ -826,7 +742,7 @@ const MerchantChatInterface = () => {
                       )}
                     </div>
                     <div className="ml-3">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center gap-2">
                         <h2 className="font-semibold text-gray-900">{selectedCustomer.customer?.name || 'Customer'}</h2>
                         {selectedCustomer.customer?.priority === 'vip' && (
                           <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">VIP</span>
@@ -834,15 +750,13 @@ const MerchantChatInterface = () => {
                       </div>
                       <p className="text-sm text-gray-500">
                         {isUserOnline(selectedCustomer.customer?.id) ? 'Online' : 'Last seen recently'} • 
-                        {selectedCustomer.customer?.orderCount || 0} orders • 
-                        Chatting with {selectedCustomer.store?.name || 'your store'}
+                        {selectedCustomer.customer?.orderCount || 0} orders
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="text-right text-xs text-gray-500">
-                      <div>Responding as:</div>
-                      <div className="font-medium text-blue-600 flex items-center gap-1">
+                  <div className="flex items-center gap-3">
+                    <div className="text-right text-xs text-gray-400">
+                      <div className="font-medium text-blue-500 flex items-center gap-1">
                         <Store className="w-3 h-3" />
                         {selectedCustomer.store?.name || user?.storeName || 'Store'}
                       </div>
@@ -857,105 +771,121 @@ const MerchantChatInterface = () => {
                 </div>
 
                 {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                <div className="flex-1 overflow-y-auto p-4 space-y-1 bg-gray-50">
                   {messages.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-gray-500">
                       <div className="text-center">
-                        <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <MessageCircle className="w-8 h-8 text-blue-600" />
+                        </div>
                         <p className="text-lg font-medium mb-2">Customer Service Chat</p>
                         <p className="text-sm">Respond as {selectedCustomer.store?.name || 'your store'} to help {selectedCustomer.customer?.name || 'this customer'}</p>
                       </div>
                     </div>
                   ) : (
-                    messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${
-                          msg.sender === 'store' ? 'justify-end' : 'justify-start'
-                        }`}
-                      >
-                        <div className="flex items-end space-x-2 max-w-xs md:max-w-md lg:max-w-lg">
-                          {/* Customer avatar for customer messages */}
-                          {(msg.sender === 'user' || msg.sender === 'customer') && (
-                            <img
-                              src={selectedCustomer.customer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedCustomer.customer?.name || 'Customer')}&background=random`}
-                              alt="Customer"
-                              className="w-6 h-6 rounded-full object-cover"
-                            />
-                          )}
-                          
-                          <div
-                            className={`px-4 py-2 rounded-lg ${
-                              msg.sender === 'store'
-                                ? 'bg-blue-500 text-white rounded-br-sm'
-                                : 'bg-white text-gray-900 rounded-bl-sm border border-gray-200'
-                              }`}
-                          >
-                            {/* Store name for store messages */}
-                            {msg.sender === 'store' && (
-                              <div className="flex items-center gap-1 mb-1">
-                                <Store className="w-3 h-3 text-blue-100" />
-                                <span className="text-xs font-medium text-blue-100">
-                                  {selectedCustomer.store?.name || user?.storeName || 'Store'}
-                                </span>
-                              </div>
+                    messages.map((msg, index) => {
+                      const isStore = msg.sender === 'store';
+                      const isFirstInGroup = index === 0 || messages[index - 1].sender !== msg.sender;
+                      const isLastInGroup = index === messages.length - 1 || messages[index + 1].sender !== msg.sender;
+                      
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`flex ${isStore ? 'justify-end' : 'justify-start'} ${isFirstInGroup ? 'mt-3' : 'mt-1'}`}
+                        >
+                          <div className="flex items-end space-x-2 max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
+                            {/* Customer avatar for customer messages - only on last message in group */}
+                            {!isStore && isLastInGroup && (
+                              <img
+                                src={selectedCustomer.customer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedCustomer.customer?.name || 'Customer')}&background=random`}
+                                alt="Customer"
+                                className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                              />
                             )}
                             
-                            {/* Customer name for customer messages */}
-                            {(msg.sender === 'user' || msg.sender === 'customer') && (
-                              <div className="flex items-center gap-1 mb-1">
-                                <User className="w-3 h-3 text-gray-500" />
-                                <span className="text-xs font-medium text-gray-600">
-                                  {selectedCustomer.customer?.name || 'Customer'}
-                                </span>
-                              </div>
-                            )}
+                            {/* Spacer for grouped messages */}
+                            {!isStore && !isLastInGroup && <div className="w-6"></div>}
                             
-                            <p className="text-sm">{msg.text}</p>
-                            <div className={`flex items-center justify-end mt-1 space-x-1 ${
-                              msg.sender === 'store' ? 'text-blue-100' : 'text-gray-500'
-                              }`}>
-                              <Clock className="w-3 h-3" />
-                              <span className="text-xs">{msg.timestamp}</span>
-                              {msg.sender === 'store' && (
-                                <div className="ml-1">
-                                  {msg.status === 'read' ? (
-                                    <CheckCheck className="w-3 h-3 text-blue-200" />
+                            <div
+                              className={`px-3 py-2 rounded-2xl shadow-sm ${
+                                isStore
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-white text-gray-900 border border-gray-200'
+                                } ${isStore && isLastInGroup ? 'rounded-br-md' : ''} ${!isStore && isLastInGroup ? 'rounded-bl-md' : ''}`}
+                            >
+                              {/* Store/Customer name - only on first message in group */}
+                              {isFirstInGroup && (
+                                <div className="flex items-center gap-1 mb-1">
+                                  {isStore ? (
+                                    <>
+                                      <Store className="w-3 h-3 text-blue-200" />
+                                      <span className="text-xs font-medium text-blue-200">
+                                        {selectedCustomer.store?.name || user?.storeName || 'Store'}
+                                      </span>
+                                    </>
                                   ) : (
-                                    <Check className="w-3 h-3" />
+                                    <>
+                                      <User className="w-3 h-3 text-gray-400" />
+                                      <span className="text-xs font-medium text-gray-500">
+                                        {selectedCustomer.customer?.name || 'Customer'}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                              
+                              <p className="text-sm leading-relaxed">{msg.text}</p>
+                              
+                              {/* Timestamp and status - only on last message in group */}
+                              {isLastInGroup && (
+                                <div className={`flex items-center justify-end mt-1 space-x-1 ${
+                                  isStore ? 'text-blue-200' : 'text-gray-400'
+                                }`}>
+                                  <span className="text-xs">{msg.timestamp}</span>
+                                  {isStore && (
+                                    <div className="ml-1">
+                                      {msg.status === 'read' ? (
+                                        <CheckCheck className="w-3 h-3" />
+                                      ) : (
+                                        <Check className="w-3 h-3" />
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               )}
                             </div>
-                          </div>
 
-                          {/* Store avatar for store messages */}
-                          {msg.sender === 'store' && (
-                            <img
-                              src={selectedCustomer.store?.logo || user?.storeInfo?.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedCustomer.store?.name || 'Store')}&background=2563eb&color=ffffff`}
-                              alt="Store"
-                              className="w-6 h-6 rounded-full object-cover"
-                            />
-                          )}
+                            {/* Store avatar for store messages - only on last message in group */}
+                            {isStore && isLastInGroup && (
+                              <img
+                                src={selectedCustomer.store?.logo || user?.storeInfo?.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedCustomer.store?.name || 'Store')}&background=2563eb&color=ffffff`}
+                                alt="Store"
+                                className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                              />
+                            )}
+                            
+                            {/* Spacer for grouped messages */}
+                            {isStore && !isLastInGroup && <div className="w-6"></div>}
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
 
                   {/* Typing indicator */}
                   {typingUsers.length > 0 && (
-                    <div className="flex justify-start">
-                      <div className="flex items-center space-x-2">
+                    <div className="flex justify-start mt-3">
+                      <div className="flex items-end space-x-2">
                         <img
                           src={selectedCustomer.customer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedCustomer.customer?.name || 'Customer')}&background=random`}
                           alt="Customer"
                           className="w-6 h-6 rounded-full object-cover"
                         />
-                        <div className="bg-gray-200 px-4 py-2 rounded-lg">
+                        <div className="bg-white px-3 py-2 rounded-2xl border border-gray-200 rounded-bl-md shadow-sm">
                           <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                           </div>
                         </div>
                       </div>
@@ -965,14 +895,14 @@ const MerchantChatInterface = () => {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Quick Responses for Store */}
+                {/* Quick Responses */}
                 <div className="bg-white p-3 border-t border-gray-100">
-                  <div className="flex space-x-2 overflow-x-auto pb-2">
+                  <div className="flex space-x-2 overflow-x-auto pb-1">
                     {quickResponses.map((response, index) => (
                       <button
                         key={index}
                         onClick={() => handleQuickResponse(response)}
-                        className="flex-shrink-0 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded-full transition-colors whitespace-nowrap"
+                        className="flex-shrink-0 px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs rounded-md transition-colors whitespace-nowrap"
                         title="Store quick response"
                       >
                         {response}
@@ -982,75 +912,76 @@ const MerchantChatInterface = () => {
                 </div>
 
                 {/* Message Input */}
-                <div className="bg-white p-4 border-t border-gray-200">
-                  <div className="flex items-end space-x-2">
+                <div className="bg-white p-3 border-t border-gray-100">
+                  <div className="flex items-end space-x-3">
                     <div className="flex-1 relative">
-                      <div className="absolute top-2 left-3 flex items-center gap-1 text-xs text-gray-500">
+                      <div className="absolute top-1 left-3 flex items-center gap-1 text-xs text-gray-400">
                         <Store className="w-3 h-3" />
-                        <span>Replying as {selectedCustomer.store?.name || user?.storeName || 'Store'}</span>
+                        <span>{selectedCustomer.store?.name || user?.storeName || 'Store'}</span>
                       </div>
                       <textarea
                         value={message}
                         onChange={handleMessageChange}
                         onKeyPress={handleKeyPress}
-                        placeholder={`Type your store response to ${selectedCustomer.customer?.name || 'customer'}...`}
+                        placeholder={`Reply to ${selectedCustomer.customer?.name || 'customer'}...`}
                         rows={1}
                         disabled={sendingMessage || !isConnected}
-                        className="w-full px-4 pt-8 pb-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none max-h-32 disabled:bg-gray-100"
+                        className="w-full px-3 pt-6 pb-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none max-h-32 disabled:bg-gray-50 text-sm"
+                        style={{ minHeight: '50px' }}
                       />
                     </div>
                     <button
                       onClick={handleSendMessage}
                       disabled={!message.trim() || sendingMessage || !isConnected}
-                      className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center"
+                      className="p-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                       title={!isConnected ? 'Store offline' : 'Send store response'}
                     >
                       {sendingMessage ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <Send className="w-5 h-5" />
+                        <Send className="w-4 h-4" />
                       )}
                     </button>
                   </div>
                   {!isConnected && (
-                    <p className="text-xs text-orange-500 mt-1">Store is offline - reconnecting...</p>
+                    <p className="text-xs text-orange-600 mt-2">Store is offline - reconnecting...</p>
                   )}
                 </div>
               </>
             ) : (
               /* Welcome Screen */
               <div className="flex-1 flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                  <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Store className="w-12 h-12 text-blue-500" />
+                <div className="text-center max-w-md">
+                  <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <Store className="w-10 h-10 text-blue-600" />
                   </div>
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">Store Customer Support</h2>
-                  <p className="text-gray-600 max-w-md mb-4">
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-3">Store Customer Support</h2>
+                  <p className="text-gray-600 mb-6">
                     Select a customer from the sidebar to start providing store support. You'll be responding as your store to help customers.
                   </p>
-                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-500 max-w-md mx-auto">
-                    <div className="flex items-center justify-center space-x-2">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center justify-center gap-2 p-3 bg-white rounded-lg border border-gray-100">
                       <AlertCircle className="w-4 h-4 text-orange-500" />
-                      <span>{totalUnreadCount} unread</span>
+                      <span className="text-gray-700">{totalUnreadCount} unread</span>
                     </div>
-                    <div className="flex items-center justify-center space-x-2">
+                    <div className="flex items-center justify-center gap-2 p-3 bg-white rounded-lg border border-gray-100">
                       <Star className="w-4 h-4 text-yellow-500" />
-                      <span>{customers.filter(c => c.customer?.priority === 'vip').length} VIP customers</span>
+                      <span className="text-gray-700">{customers.filter(c => c.customer?.priority === 'vip').length} VIP</span>
                     </div>
-                    <div className="flex items-center justify-center space-x-2">
+                    <div className="flex items-center justify-center gap-2 p-3 bg-white rounded-lg border border-gray-100">
                       <Users className="w-4 h-4 text-blue-500" />
-                      <span>{customers.length} conversations</span>
+                      <span className="text-gray-700">{customers.length} total</span>
                     </div>
-                    <div className="flex items-center justify-center space-x-2">
-                      <Store className="w-4 h-4 text-green-500" />
-                      <span>{customers.filter(c => isUserOnline(c.customer?.id)).length} online</span>
+                    <div className="flex items-center justify-center gap-2 p-3 bg-white rounded-lg border border-gray-100">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-gray-700">{customers.filter(c => isUserOnline(c.customer?.id)).length} online</span>
                     </div>
                   </div>
                   
                   {user?.storeName && (
-                    <div className="mt-6 p-3 bg-blue-50 rounded-lg">
+                    <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
                       <p className="text-sm text-blue-700">
-                        Managing conversations for: <span className="font-medium">{user.storeName}</span>
+                        Managing conversations for: <span className="font-semibold">{user.storeName}</span>
                       </p>
                     </div>
                   )}

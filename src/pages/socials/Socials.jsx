@@ -1,10 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../elements/Layout';
-import merchantAuthService from '../../services/merchantAuthService'; // Use your existing auth service
-import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaYoutube, FaTiktok, FaPinterest, FaSnapchat, FaWhatsapp, FaDiscord, FaTumblr, FaReddit, FaVimeo, FaGithub, FaFlickr } from 'react-icons/fa';
-import { FiEdit, FiTrash, FiExternalLink, FiPlus } from 'react-icons/fi';
-import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
-import Modal from '../../elements/Modal';
+import merchantAuthService from '../../services/merchantAuthService';
+import {
+    Plus,
+    Edit3,
+    Trash2,
+    ExternalLink,
+    CheckCircle,
+    AlertCircle,
+    Users,
+    Share2,
+    Globe,
+    Smartphone,
+    Monitor,
+    Camera,
+    MessageCircle,
+    Play,
+    Music,
+    Image,
+    Video,
+    BookOpen,
+    Code,
+    Eye,
+    X,
+    Save,
+    Lightbulb
+} from 'lucide-react';
 
 const Socials = () => {
     const [socialLinks, setSocialLinks] = useState([]);
@@ -18,14 +39,26 @@ const Socials = () => {
     const [storeId, setStoreId] = useState(null);
     const [storeData, setStoreData] = useState(null);
 
-    // Social media platforms
+    // Social media platforms with modern icons
     const socialMediaPlatforms = [
-        'facebook', 'instagram', 'twitter', 'linkedin', 'youtube', 
-        'tiktok', 'pinterest', 'snapchat', 'whatsapp', 'discord', 
-        'tumblr', 'reddit', 'vimeo', 'github', 'flickr'
+        { id: 'facebook', name: 'Facebook', icon: Users, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+        { id: 'instagram', name: 'Instagram', icon: Camera, color: 'text-pink-600', bgColor: 'bg-pink-50' },
+        { id: 'twitter', name: 'Twitter', icon: MessageCircle, color: 'text-blue-400', bgColor: 'bg-blue-50' },
+        { id: 'linkedin', name: 'LinkedIn', icon: Users, color: 'text-blue-700', bgColor: 'bg-blue-50' },
+        { id: 'youtube', name: 'YouTube', icon: Play, color: 'text-red-600', bgColor: 'bg-red-50' },
+        { id: 'tiktok', name: 'TikTok', icon: Music, color: 'text-gray-800', bgColor: 'bg-gray-50' },
+        { id: 'pinterest', name: 'Pinterest', icon: Image, color: 'text-red-500', bgColor: 'bg-red-50' },
+        { id: 'snapchat', name: 'Snapchat', icon: Camera, color: 'text-yellow-400', bgColor: 'bg-yellow-50' },
+        { id: 'whatsapp', name: 'WhatsApp', icon: MessageCircle, color: 'text-green-600', bgColor: 'bg-green-50' },
+        { id: 'discord', name: 'Discord', icon: MessageCircle, color: 'text-indigo-600', bgColor: 'bg-indigo-50' },
+        { id: 'tumblr', name: 'Tumblr', icon: BookOpen, color: 'text-indigo-600', bgColor: 'bg-indigo-50' },
+        { id: 'reddit', name: 'Reddit', icon: MessageCircle, color: 'text-orange-600', bgColor: 'bg-orange-50' },
+        { id: 'vimeo', name: 'Vimeo', icon: Video, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+        { id: 'github', name: 'GitHub', icon: Code, color: 'text-gray-800', bgColor: 'bg-gray-50' },
+        { id: 'flickr', name: 'Flickr', icon: Image, color: 'text-blue-500', bgColor: 'bg-blue-50' }
     ];
 
-    // Get auth headers using your existing auth service
+    // Get auth headers using existing auth service
     const getAuthHeaders = () => {
         const token = merchantAuthService.getToken();
         
@@ -51,18 +84,14 @@ const Socials = () => {
         return true;
     };
 
-    // Get merchant's store using your auth service
+    // Get merchant's store
     const getMerchantStore = async () => {
         try {
-            console.log('🔍 Fetching merchant stores...');
-            
-            // Check if authenticated first
             if (!checkAuthStatus()) {
                 throw new Error('Authentication required');
             }
             
             const token = merchantAuthService.getToken();
-            console.log('🎫 Using token:', token ? 'Found' : 'Not found');
             
             const response = await fetch('http://localhost:4000/api/v1/stores/merchant/my-stores', {
                 method: 'GET',
@@ -72,12 +101,7 @@ const Socials = () => {
                 }
             });
 
-            console.log('📡 Response status:', response.status);
-
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ Store fetch failed:', errorText);
-                
                 if (response.status === 401) {
                     throw new Error('Authentication failed. Your session may have expired.');
                 } else if (response.status === 404) {
@@ -88,18 +112,16 @@ const Socials = () => {
             }
 
             const data = await response.json();
-            console.log('✅ Store data received:', data);
 
             if (data.success && data.stores && data.stores.length > 0) {
                 const store = data.stores[0];
-                console.log('🏪 Store found:', store.name);
                 setStoreData(store);
                 return store.id;
             }
             
             throw new Error('No store found for your merchant account. Please create a store first.');
         } catch (error) {
-            console.error('💥 Error fetching merchant store:', error);
+            console.error('Error fetching merchant store:', error);
             throw error;
         }
     };
@@ -107,8 +129,6 @@ const Socials = () => {
     // Fetch social media links for the store
     const fetchSocialLinks = async (storeId) => {
         try {
-            console.log('📱 Fetching social links for store:', storeId);
-            
             if (!checkAuthStatus()) {
                 return [];
             }
@@ -123,33 +143,24 @@ const Socials = () => {
                 }
             });
 
-            console.log('📡 Socials response status:', response.status);
-
-            // 404 is OK for socials - means no social links exist yet
             if (response.status === 404) {
-                console.log('📭 No social links found yet - this is normal for new stores');
                 return [];
             }
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error('❌ Socials fetch failed:', errorData);
-                
                 if (response.status === 401) {
                     throw new Error('Authentication failed while fetching social links.');
                 }
                 
+                const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.message || `Failed to fetch social links (${response.status})`);
             }
 
             const data = await response.json();
-            console.log('✅ Socials data received:', data);
-            
             return data.success ? (data.socials || []) : [];
             
         } catch (error) {
-            console.error('💥 Error fetching social links:', error);
-            // Don't throw - just return empty array for social links
+            console.error('Error fetching social links:', error);
             return [];
         }
     };
@@ -161,30 +172,20 @@ const Socials = () => {
                 setLoading(true);
                 setError(null);
                 
-                console.log('🚀 Starting socials page data load...');
-                console.log('🔐 Auth status:', merchantAuthService.isAuthenticated());
-                console.log('👤 Current merchant:', merchantAuthService.getCurrentMerchant());
-                
-                // Check authentication first
                 if (!merchantAuthService.isAuthenticated()) {
                     throw new Error('Your session has expired. Please log in again.');
                 }
                 
-                // Get the merchant's store
                 const merchantStoreId = await getMerchantStore();
                 setStoreId(merchantStoreId);
                 
-                // Fetch social media links
                 const socials = await fetchSocialLinks(merchantStoreId);
                 setSocialLinks(socials);
                 
-                console.log(`📋 Loaded ${socials.length} social links`);
-                
             } catch (error) {
-                console.error('💥 Error loading socials data:', error);
+                console.error('Error loading socials data:', error);
                 setError(error.message);
                 
-                // If authentication error, redirect after showing message
                 if (error.message.includes('session has expired') || 
                     error.message.includes('Authentication failed')) {
                     setTimeout(() => {
@@ -229,7 +230,6 @@ const Socials = () => {
             return;
         }
 
-        // Validate URL format
         const urlRegex = /^https?:\/\/.+/;
         if (!urlRegex.test(newSocial.link)) {
             showError('Please enter a valid URL starting with http:// or https://');
@@ -246,8 +246,6 @@ const Socials = () => {
         try {
             setSubmitting(true);
             
-            console.log('➕ Creating social link:', { platform: newSocial.platform, link: newSocial.link });
-            
             const response = await fetch('http://localhost:4000/api/v1/socials', {
                 method: 'POST',
                 headers: getAuthHeaders(),
@@ -259,7 +257,6 @@ const Socials = () => {
             });
 
             const data = await response.json();
-            console.log('📡 Create response:', data);
 
             if (!response.ok) {
                 if (response.status === 401) {
@@ -274,10 +271,8 @@ const Socials = () => {
             setIsModalOpen(false);
             setNewSocial({ platform: '', link: '' });
             showSuccess('Social media link added successfully!');
-            
-            console.log('✅ Social link created successfully');
         } catch (error) {
-            console.error('💥 Create social error:', error);
+            console.error('Create social error:', error);
             showError(error.message);
         } finally {
             setSubmitting(false);
@@ -302,7 +297,6 @@ const Socials = () => {
             return;
         }
 
-        // Validate URL format
         const urlRegex = /^https?:\/\/.+/;
         if (!urlRegex.test(newSocial.link)) {
             showError('Please enter a valid URL starting with http:// or https://');
@@ -314,8 +308,6 @@ const Socials = () => {
         try {
             setSubmitting(true);
             
-            console.log('✏️ Updating social link:', editing.id);
-            
             const response = await fetch(`http://localhost:4000/api/v1/socials/${editing.id}`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
@@ -326,7 +318,6 @@ const Socials = () => {
             });
 
             const data = await response.json();
-            console.log('📡 Update response:', data);
 
             if (!response.ok) {
                 if (response.status === 401) {
@@ -344,10 +335,8 @@ const Socials = () => {
             setEditing(null);
             setNewSocial({ platform: '', link: '' });
             showSuccess('Social media link updated successfully!');
-            
-            console.log('✅ Social link updated successfully');
         } catch (error) {
-            console.error('💥 Update social error:', error);
+            console.error('Update social error:', error);
             showError(error.message);
         } finally {
             setSubmitting(false);
@@ -363,15 +352,12 @@ const Socials = () => {
         if (!checkAuthStatus()) return;
 
         try {
-            console.log('🗑️ Deleting social link:', id);
-            
             const response = await fetch(`http://localhost:4000/api/v1/socials/${id}`, {
                 method: 'DELETE',
                 headers: getAuthHeaders()
             });
 
             const data = await response.json();
-            console.log('📡 Delete response:', data);
 
             if (!response.ok) {
                 if (response.status === 401) {
@@ -384,173 +370,110 @@ const Socials = () => {
 
             setSocialLinks(socialLinks.filter((social) => social.id !== id));
             showSuccess('Social media link deleted successfully!');
-            
-            console.log('✅ Social link deleted successfully');
         } catch (error) {
-            console.error('💥 Delete social error:', error);
+            console.error('Delete social error:', error);
             showError(error.message);
         }
     };
 
-    // Get platform icon
-    const getPlatformIcon = (platform) => {
-        const iconProps = { className: "w-5 h-5" };
-        
-        switch (platform.toLowerCase()) {
-            case 'facebook':
-                return <FaFacebook {...iconProps} className="w-5 h-5 text-blue-600" />;
-            case 'instagram':
-                return <FaInstagram {...iconProps} className="w-5 h-5 text-pink-600" />;
-            case 'twitter':
-                return <FaTwitter {...iconProps} className="w-5 h-5 text-blue-400" />;
-            case 'linkedin':
-                return <FaLinkedin {...iconProps} className="w-5 h-5 text-blue-700" />;
-            case 'youtube':
-                return <FaYoutube {...iconProps} className="w-5 h-5 text-red-600" />;
-            case 'tiktok':
-                return <FaTiktok {...iconProps} className="w-5 h-5 text-black" />;
-            case 'pinterest':
-                return <FaPinterest {...iconProps} className="w-5 h-5 text-red-500" />;
-            case 'snapchat':
-                return <FaSnapchat {...iconProps} className="w-5 h-5 text-yellow-400" />;
-            case 'whatsapp':
-                return <FaWhatsapp {...iconProps} className="w-5 h-5 text-green-600" />;
-            case 'discord':
-                return <FaDiscord {...iconProps} className="w-5 h-5 text-blue-500" />;
-            case 'tumblr':
-                return <FaTumblr {...iconProps} className="w-5 h-5 text-indigo-600" />;
-            case 'reddit':
-                return <FaReddit {...iconProps} className="w-5 h-5 text-orange-600" />;
-            case 'vimeo':
-                return <FaVimeo {...iconProps} className="w-5 h-5 text-blue-600" />;
-            case 'github':
-                return <FaGithub {...iconProps} className="w-5 h-5 text-black" />;
-            case 'flickr':
-                return <FaFlickr {...iconProps} className="w-5 h-5 text-blue-500" />;
-            default:
-                return <span className="w-5 h-5 text-gray-600">🌐</span>;
-        }
-    };
-
-    // Get platform display name
-    const getPlatformDisplayName = (platform) => {
-        return platform.charAt(0).toUpperCase() + platform.slice(1);
-    };
-
-    // Load data on component mount
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                
-                console.log('🚀 Starting socials page data load...');
-                console.log('🔐 Auth status:', merchantAuthService.isAuthenticated());
-                
-                const currentMerchant = merchantAuthService.getCurrentMerchant();
-                console.log('👤 Current merchant:', currentMerchant);
-                
-                // Check authentication first
-                if (!merchantAuthService.isAuthenticated()) {
-                    throw new Error('Your session has expired. Please log in again.');
-                }
-                
-                // Get the merchant's store
-                const merchantStoreId = await getMerchantStore();
-                setStoreId(merchantStoreId);
-                
-                // Fetch social media links
-                const socials = await fetchSocialLinks(merchantStoreId);
-                setSocialLinks(socials);
-                
-                console.log(`📋 Loaded ${socials.length} social links`);
-                
-            } catch (error) {
-                console.error('💥 Error loading socials data:', error);
-                setError(error.message);
-                
-                // If authentication error, redirect after showing message
-                if (error.message.includes('session has expired') || 
-                    error.message.includes('Authentication failed') ||
-                    error.message.includes('Authentication required')) {
-                    setTimeout(() => {
-                        merchantAuthService.logout();
-                    }, 3000);
-                }
-            } finally {
-                setLoading(false);
-            }
+    // Get platform info
+    const getPlatformInfo = (platformId) => {
+        return socialMediaPlatforms.find(p => p.id === platformId.toLowerCase()) || {
+            id: platformId,
+            name: platformId.charAt(0).toUpperCase() + platformId.slice(1),
+            icon: Globe,
+            color: 'text-gray-600',
+            bgColor: 'bg-gray-50'
         };
+    };
 
-        // Only load if we have the auth service initialized
-        if (merchantAuthService.isInitialized) {
-            loadData();
-        } else {
-            // Wait a bit for auth service to initialize
-            setTimeout(() => {
-                if (merchantAuthService.isAuthenticated()) {
-                    loadData();
-                } else {
-                    setLoading(false);
-                    setError('Authentication service not available. Please refresh the page.');
-                }
-            }, 1000);
-        }
-    }, []);
+    const LoadingSpinner = () => (
+        <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+                <div className="relative">
+                    <div className="w-16 h-16 border-4 border-gray-200 rounded-full"></div>
+                    <div className="absolute top-0 left-0 w-16 h-16 border-4 border-indigo-600 rounded-full animate-spin border-t-transparent"></div>
+                </div>
+                <p className="mt-4 text-gray-600 font-medium">Loading social media links...</p>
+            </div>
+        </div>
+    );
 
     if (loading) {
         return (
-            <Layout title="Social Media Links">
-                <div className="max-w-4xl mx-auto py-6">
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-500 mr-3" />
-                        <span className="text-gray-600">Loading social media links...</span>
-                    </div>
-                </div>
+            <Layout 
+                title="Social Media Links"
+                subtitle="Connect your social media presence"
+            >
+                <LoadingSpinner />
             </Layout>
         );
     }
 
     return (
-        <Layout title="Social Media Links">
-            <div className="max-w-4xl mx-auto py-6">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-900">Social Media Links</h2>
-                        <p className="text-gray-600 mt-1">
-                            {storeData ? `Manage social links for ${storeData.name}` : 'Manage your store\'s social media presence'}
-                        </p>
-                    </div>
-                    {!error && storeId && (
-                        <button
-                            onClick={handleAddSocial}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                            <FiPlus className="w-4 h-4" />
-                            Add Social Link
-                        </button>
-                    )}
-                </div>
-
+        <Layout 
+            title="Social Media Links"
+            subtitle="Connect your social media presence to grow your audience"
+        >
+            <div className="space-y-8">
                 {/* Success/Error Messages */}
                 {success && (
-                    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                        <span className="text-green-800">{success}</span>
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center space-x-3">
+                        <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                        <span className="text-green-800 font-medium">{success}</span>
                     </div>
                 )}
 
                 {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-600" />
-                        <span className="text-red-800">{error}</span>
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center space-x-3">
+                        <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                        <span className="text-red-800 font-medium">{error}</span>
                     </div>
                 )}
 
-                {/* Error State */}
+                {/* Header Card */}
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 text-white">
+                    <div className="relative z-10">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-2xl font-bold mb-2">Social Media Presence</h2>
+                                <p className="text-indigo-100">
+                                    {storeData ? `Managing links for ${storeData.name}` : 'Connect your social platforms'}
+                                </p>
+                            </div>
+                            {!error && storeId && (
+                                <button
+                                    onClick={handleAddSocial}
+                                    className="flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+                                >
+                                    <Plus className="h-5 w-5" />
+                                    Add Platform
+                                </button>
+                            )}
+                        </div>
+                        
+                        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="rounded-lg bg-white bg-opacity-10 p-4">
+                                <div className="text-2xl font-bold">{socialLinks.length}</div>
+                                <div className="text-sm text-indigo-100">Connected Platforms</div>
+                            </div>
+                            <div className="rounded-lg bg-white bg-opacity-10 p-4">
+                                <div className="text-2xl font-bold">24/7</div>
+                                <div className="text-sm text-indigo-100">Always Accessible</div>
+                            </div>
+                            <div className="rounded-lg bg-white bg-opacity-10 p-4">
+                                <div className="text-2xl font-bold">∞</div>
+                                <div className="text-sm text-indigo-100">Reach Potential</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white bg-opacity-10"></div>
+                    <div className="absolute bottom-0 left-0 -mb-8 -ml-8 h-32 w-32 rounded-full bg-white bg-opacity-5"></div>
+                </div>
+
                 {error ? (
-                    <div className="bg-white rounded-xl shadow-sm border border-red-200">
+                    /* Error State */
+                    <div className="bg-white rounded-2xl shadow-sm border border-red-200 overflow-hidden">
                         <div className="p-12 text-center">
                             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <AlertCircle className="w-8 h-8 text-red-600" />
@@ -564,8 +487,8 @@ const Socials = () => {
                                         You need to create a store before managing social media links.
                                     </p>
                                     <button
-                                        onClick={() => window.location.href = '/dashboard/stores'}
-                                        className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                                        onClick={() => window.location.href = '/dashboard/account'}
+                                        className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors"
                                     >
                                         Create Your Store
                                     </button>
@@ -577,7 +500,7 @@ const Socials = () => {
                                     </p>
                                     <button
                                         onClick={() => merchantAuthService.logout()}
-                                        className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors"
+                                        className="bg-red-600 text-white px-6 py-3 rounded-xl hover:bg-red-700 transition-colors"
                                     >
                                         Go to Login
                                     </button>
@@ -585,7 +508,7 @@ const Socials = () => {
                             ) : (
                                 <button
                                     onClick={() => window.location.reload()}
-                                    className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                                    className="bg-gray-600 text-white px-6 py-3 rounded-xl hover:bg-gray-700 transition-colors"
                                 >
                                     Try Again
                                 </button>
@@ -593,188 +516,258 @@ const Socials = () => {
                         </div>
                     </div>
                 ) : (
-                    /* Social Links List - Only show if no error */
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                    /* Social Links List */
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-gray-200">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                    <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                                        <Share2 className="h-5 w-5 text-indigo-600" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-gray-900">Connected Platforms</h3>
+                                        <p className="text-sm text-gray-600">Your social media presence</p>
+                                    </div>
+                                </div>
+                                {socialLinks.length > 0 && (
+                                    <span className="text-sm text-indigo-600 font-medium">
+                                        {socialLinks.length} platform{socialLinks.length !== 1 ? 's' : ''} connected
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
                         {socialLinks.length > 0 ? (
                             <div className="divide-y divide-gray-200">
-                                {socialLinks.map((social) => (
-                                    <div key={social.id} className="p-6 hover:bg-gray-50 transition-colors">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                {/* Platform Icon */}
-                                                <div className="p-3 bg-gray-100 rounded-lg">
-                                                    {getPlatformIcon(social.platform)}
+                                {socialLinks.map((social) => {
+                                    const platformInfo = getPlatformInfo(social.platform);
+                                    const Icon = platformInfo.icon;
+                                    
+                                    return (
+                                        <div key={social.id} className="p-6 hover:bg-gray-50 transition-colors">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-4">
+                                                    <div className={`p-3 ${platformInfo.bgColor} rounded-xl`}>
+                                                        <Icon className={`h-6 w-6 ${platformInfo.color}`} />
+                                                    </div>
+                                                    
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-900">
+                                                            {platformInfo.name}
+                                                        </h3>
+                                                        <a
+                                                            href={social.link}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 transition-colors mt-1"
+                                                        >
+                                                            <Globe className="h-4 w-4" />
+                                                            <span className="text-sm">
+                                                                {social.link.length > 40 ? social.link.substring(0, 40) + '...' : social.link}
+                                                            </span>
+                                                            <ExternalLink className="h-3 w-3" />
+                                                        </a>
+                                                    </div>
                                                 </div>
-                                                
-                                                {/* Platform Details */}
-                                                <div>
-                                                    <h3 className="font-semibold text-gray-900 text-lg">
-                                                        {getPlatformDisplayName(social.platform)}
-                                                    </h3>
-                                                    <a
-                                                        href={social.link}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 mt-1"
-                                                    >
-                                                        {social.link.length > 50 ? social.link.substring(0, 50) + '...' : social.link}
-                                                        <FiExternalLink className="w-3 h-3" />
-                                                    </a>
-                                                </div>
-                                            </div>
 
-                                            {/* Action Buttons */}
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => handleEditSocial(social)}
-                                                    className="flex items-center gap-1 px-3 py-2 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 rounded-lg transition-colors"
-                                                >
-                                                    <FiEdit className="w-4 h-4" />
-                                                    <span>Edit</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteSocial(social.id)}
-                                                    className="flex items-center gap-1 px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                                                >
-                                                    <FiTrash className="w-4 h-4" />
-                                                    <span>Delete</span>
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => handleEditSocial(social)}
+                                                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                        title="Edit link"
+                                                    >
+                                                        <Edit3 className="h-4 w-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteSocial(social.id)}
+                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Delete link"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="p-12 text-center">
-                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <FiPlus className="w-8 h-8 text-gray-400" />
+                                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Share2 className="w-8 h-8 text-indigo-600" />
                                 </div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-2">No social links yet</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">No social platforms connected</h3>
                                 <p className="text-gray-600 mb-6">
-                                    Connect your social media accounts to help customers find and follow your store.
+                                    Connect your social media accounts to help customers find and follow your business online.
                                 </p>
                                 <button
                                     onClick={handleAddSocial}
-                                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                                    className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"
                                 >
-                                    Add Your First Social Link
+                                    <Plus className="h-4 w-4" />
+                                    Add Your First Platform
                                 </button>
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* Tips Section - Only show if no error */}
+                {/* Tips Section */}
                 {!error && (
-                    <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-                        <h3 className="font-semibold text-blue-900 mb-3">💡 Tips for Social Media Links</h3>
-                        <ul className="text-blue-800 text-sm space-y-2">
-                            <li>• Use your main business page URLs, not personal profiles</li>
-                            <li>• Make sure your social media profiles are public and active</li>
-                            <li>• Keep your social media content aligned with your store's brand</li>
-                            <li>• Regular posting helps maintain customer engagement</li>
-                        </ul>
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+                        <div className="flex items-start space-x-3">
+                            <div className="flex-shrink-0">
+                                <Lightbulb className="h-6 w-6 text-blue-600 mt-1" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-blue-900 mb-3">Social Media Best Practices</h3>
+                                <ul className="text-blue-800 text-sm space-y-2">
+                                    <li className="flex items-start space-x-2">
+                                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                        <span>Use your business page URLs, not personal profiles</span>
+                                    </li>
+                                    <li className="flex items-start space-x-2">
+                                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                        <span>Ensure your profiles are public and actively maintained</span>
+                                    </li>
+                                    <li className="flex items-start space-x-2">
+                                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                        <span>Keep your brand consistent across all platforms</span>
+                                    </li>
+                                    <li className="flex items-start space-x-2">
+                                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                        <span>Regular posting helps maintain customer engagement</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
 
             {/* Add/Edit Social Modal */}
-            <Modal 
-                isOpen={isModalOpen} 
-                onClose={() => {
-                    setIsModalOpen(false);
-                    setEditing(null);
-                    setNewSocial({ platform: '', link: '' });
-                }} 
-                title={editing ? 'Edit Social Media Link' : 'Add Social Media Link'}
-            >
-                <form onSubmit={editing ? handleUpdateSocial : handleCreateSocial} className="space-y-6">
-                    {/* Platform Selection */}
-                    <div>
-                        <label htmlFor="platform" className="block text-sm font-medium text-gray-700 mb-2">
-                            Platform <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            id="platform"
-                            value={newSocial.platform}
-                            onChange={(e) => setNewSocial({ ...newSocial, platform: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            required
-                            disabled={submitting}
-                        >
-                            <option value="">Select a Platform</option>
-                            {socialMediaPlatforms.map((platform) => (
-                                <option key={platform} value={platform}>
-                                    {getPlatformDisplayName(platform)}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* URL Input */}
-                    <div>
-                        <label htmlFor="link" className="block text-sm font-medium text-gray-700 mb-2">
-                            URL <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="url"
-                            id="link"
-                            value={newSocial.link}
-                            onChange={(e) => setNewSocial({ ...newSocial, link: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="https://facebook.com/yourstore"
-                            required
-                            disabled={submitting}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                            Enter the full URL including https://
-                        </p>
-                    </div>
-
-                    {/* URL Preview */}
-                    {newSocial.platform && newSocial.link && (
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                            <p className="text-sm text-gray-700 mb-2">Preview:</p>
-                            <div className="flex items-center gap-3">
-                                {getPlatformIcon(newSocial.platform)}
-                                <span className="font-medium">{getPlatformDisplayName(newSocial.platform)}</span>
-                                <span className="text-gray-500">→</span>
-                                <span className="text-blue-600 text-sm">{newSocial.link}</span>
-                            </div>
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                {editing ? 'Edit Social Media Link' : 'Add Social Media Link'}
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    setIsModalOpen(false);
+                                    setEditing(null);
+                                    setNewSocial({ platform: '', link: '' });
+                                }}
+                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
                         </div>
-                    )}
 
-                    {/* Form Actions */}
-                    <div className="flex gap-3 pt-4">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setIsModalOpen(false);
-                                setEditing(null);
-                                setNewSocial({ platform: '', link: '' });
-                            }}
-                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                            disabled={submitting}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={submitting}
-                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                            {submitting ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    {editing ? 'Updating...' : 'Adding...'}
-                                </>
-                            ) : (
-                                editing ? 'Update Social Link' : 'Add Social Link'
+                        <form onSubmit={editing ? handleUpdateSocial : handleCreateSocial} className="p-6 space-y-6">
+                            {/* Platform Selection */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">
+                                    Platform <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    value={newSocial.platform}
+                                    onChange={(e) => setNewSocial({ ...newSocial, platform: e.target.value })}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                                    required
+                                    disabled={submitting}
+                                >
+                                    <option value="">Select a Platform</option>
+                                    {socialMediaPlatforms.map((platform) => (
+                                        <option key={platform.id} value={platform.id}>
+                                            {platform.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* URL Input */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">
+                                    Profile URL <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative">
+                                    <Globe className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                    <input
+                                        type="url"
+                                        value={newSocial.link}
+                                        onChange={(e) => setNewSocial({ ...newSocial, link: e.target.value })}
+                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                                        placeholder="https://facebook.com/yourstore"
+                                        required
+                                        disabled={submitting}
+                                    />
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                    Enter the complete URL including https://
+                                </p>
+                            </div>
+
+                            {/* URL Preview */}
+                            {newSocial.platform && newSocial.link && (
+                                <div className="p-4 bg-gray-50 rounded-xl">
+                                    <p className="text-sm text-gray-700 mb-2">Preview:</p>
+                                    <div className="flex items-center space-x-3">
+                                        {(() => {
+                                            const platformInfo = getPlatformInfo(newSocial.platform);
+                                            const Icon = platformInfo.icon;
+                                            return (
+                                                <>
+                                                    <div className={`p-2 ${platformInfo.bgColor} rounded-lg`}>
+                                                        <Icon className={`h-5 w-5 ${platformInfo.color}`} />
+                                                    </div>
+                                                    <span className="font-medium text-gray-900">{platformInfo.name}</span>
+                                                    <span className="text-gray-400">→</span>
+                                                    <span className="text-indigo-600 text-sm truncate">{newSocial.link}</span>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
                             )}
-                        </button>
+
+                            {/* Form Actions */}
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsModalOpen(false);
+                                        setEditing(null);
+                                        setNewSocial({ platform: '', link: '' });
+                                    }}
+                                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                                    disabled={submitting}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="flex-1 px-4 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                            {editing ? 'Updating...' : 'Adding...'}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="h-4 w-4" />
+                                            {editing ? 'Update Link' : 'Add Link'}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                </form>
-            </Modal>
+                </div>
+            )}
         </Layout>
     );
 };

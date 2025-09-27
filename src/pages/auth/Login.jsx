@@ -132,7 +132,7 @@ const MerchantLoginPage = () => {
           <div className="space-y-4">
             <div className="flex items-center text-blue-100">
               <Shield className="w-5 h-5 text-blue-400 mr-3" />
-              <span>Secure payment processing</span>
+              <span>Secure Business Management</span>
             </div>
             <div className="flex items-center text-blue-100">
               <Zap className="w-5 h-5 text-purple-400 mr-3" />
@@ -265,15 +265,6 @@ const MerchantLoginPage = () => {
                   Sign up for free
                 </Link>
               </p>
-            </div>
-          </div>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-            <p className="text-sm text-blue-200 text-center mb-2">Demo Credentials:</p>
-            <div className="text-xs text-blue-300 text-center space-y-1">
-              <p>Email: demo@merchant.com</p>
-              <p>Password: demo123</p>
             </div>
           </div>
         </div>

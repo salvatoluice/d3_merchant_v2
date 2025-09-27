@@ -5,8 +5,9 @@ import Modal from '../../elements/Modal';
 import EnhancedOfferForm from './OfferForm';
 import { createOffer, fetchOffers, updateOffer, deleteOffer, getMerchantStores } from '../../services/api_service';
 import { 
-    Edit, Trash2, Eye, Calendar, Percent, Tag, Users, AlertCircle, Loader, Store, Plus,
-    Calculator, DollarSign, Clock, Zap, Star, HelpCircle, CheckCircle, TrendingUp, Filter
+    Edit, Trash2, Eye, Calendar, Percent, Tag, Users, AlertCircle, Loader2, Store, Plus,
+    Calculator, DollarSign, Clock, Zap, Star, HelpCircle, CheckCircle, TrendingUp, Filter,
+    Search, RefreshCw, Shield, UserCheck, CreditCard, MessageSquare, Info, Timer, Bell
 } from 'lucide-react';
 
 const EnhancedOfferPage = () => {
@@ -18,6 +19,8 @@ const EnhancedOfferPage = () => {
     const [hasStore, setHasStore] = useState(true);
     const [storeError, setStoreError] = useState(null);
     const [filter, setFilter] = useState('all');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         checkStoreAndLoadOffers();
@@ -28,32 +31,32 @@ const EnhancedOfferPage = () => {
             setLoading(true);
             setStoreError(null);
             
-            console.log('🔍 Checking merchant stores...');
+            console.log('Checking merchant stores...');
             
             try {
                 const storesResponse = await getMerchantStores();
                 const stores = storesResponse?.stores || storesResponse || [];
                 
                 if (stores.length === 0) {
-                    console.log('⚠️ No stores found for merchant');
+                    console.log('No stores found for merchant');
                     setHasStore(false);
                     setOffers([]);
                     return;
                 }
                 
-                console.log('✅ Found stores:', stores.length);
+                console.log('Found stores:', stores.length);
                 setHasStore(true);
                 
                 await loadOffers();
                 
             } catch (storeCheckError) {
-                console.error('❌ Store check failed:', storeCheckError);
+                console.error('Store check failed:', storeCheckError);
                 setStoreError(storeCheckError.message);
                 setHasStore(false);
             }
             
         } catch (error) {
-            console.error('❌ Failed to check stores and load offers:', error);
+            console.error('Failed to check stores and load offers:', error);
             toast.error('Failed to load page data');
         } finally {
             setLoading(false);
@@ -62,67 +65,79 @@ const EnhancedOfferPage = () => {
 
     const loadOffers = async () => {
         try {
-            console.log('🔍 Loading offers...');
+            console.log('Loading enhanced offers...');
             
             const response = await fetchOffers();
             
             if (response.error) {
-                console.log('⚠️ Offers API returned error:', response.error);
+                console.log('Offers API returned error:', response.error);
                 setStoreError(response.error);
                 setOffers([]);
             } else {
                 const offersList = response?.offers || [];
-                console.log('📋 Offers loaded:', offersList.length);
+                console.log('Enhanced offers loaded:', offersList.length);
                 setOffers(offersList);
             }
         } catch (error) {
-            console.error('❌ Failed to fetch offers:', error);
+            console.error('Failed to fetch offers:', error);
             setOffers([]);
+        }
+    };
+
+    const handleRefresh = async () => {
+        try {
+            setRefreshing(true);
+            await loadOffers();
+        } catch (error) {
+            console.error('Failed to refresh offers:', error);
+            toast.error('Failed to refresh offers');
+        } finally {
+            setRefreshing(false);
         }
     };
 
     const handleCreateOffer = async (offerData) => {
         try {
-            console.log('➕ Creating offer:', offerData);
+            console.log('Creating enhanced offer:', offerData);
             await createOffer(offerData);
             toast.success('Offer created successfully');
             setModalOpen(false);
             loadOffers();
         } catch (error) {
-            console.error('❌ Failed to create offer:', error);
+            console.error('Failed to create offer:', error);
             throw error;
         }
     };
 
     const handleUpdateOffer = async (offerData) => {
         try {
-            console.log('🔄 Updating offer:', editingOffer.id, offerData);
+            console.log('Updating enhanced offer:', editingOffer.id, offerData);
             await updateOffer(editingOffer.id, offerData);
             toast.success('Offer updated successfully');
             setModalOpen(false);
             setEditingOffer(null);
             loadOffers();
         } catch (error) {
-            console.error('❌ Failed to update offer:', error);
+            console.error('Failed to update offer:', error);
             throw error;
         }
     };
 
     const handleDeleteOffer = async (offerId) => {
         try {
-            console.log('🗑️ Deleting offer:', offerId);
+            console.log('Deleting offer:', offerId);
             await deleteOffer(offerId);
             toast.success('Offer deleted successfully');
             setDeleteConfirm(null);
             loadOffers();
         } catch (error) {
-            console.error('❌ Failed to delete offer:', error);
+            console.error('Failed to delete offer:', error);
             toast.error('Failed to delete offer');
         }
     };
 
     const handleEditClick = (offer) => {
-        console.log('✏️ Editing offer:', offer);
+        console.log('Editing enhanced offer:', offer);
         setEditingOffer(offer);
         setModalOpen(true);
     };
@@ -140,48 +155,37 @@ const EnhancedOfferPage = () => {
         return new Date(expirationDate) < new Date();
     };
 
-    // FIXED: Enhanced filtering function that properly handles expired offers and missing fields
+    // Enhanced filtering function that handles new offer types and service data
     const filteredOffers = offers.filter(offer => {
-        // Debug: Log first offer structure to understand available fields
-        if (offers.length > 0 && offers.indexOf(offer) === 0) {
-            console.log('📋 First offer structure for debugging:', {
-                id: offer.id,
-                status: offer.status,
-                featured: offer.featured,
-                offer_type: offer.offer_type,
-                requires_consultation: offer.requires_consultation,
-                service: offer.service ? {
-                    type: offer.service.type,
-                    category: offer.service.category
-                } : null,
-                availableKeys: Object.keys(offer)
-            });
-        }
+        // Search filter - now includes service booking settings
+        const matchesSearch = !searchTerm || 
+            offer.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            offer.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            offer.service?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            offer.service?.category?.toLowerCase().includes(searchTerm.toLowerCase());
+
+        if (!matchesSearch) return false;
 
         const expired = isOfferExpired(offer.expiration_date);
         
-        // Default 'all' filter excludes expired offers (customer-facing behavior)
+        // Default 'all' filter excludes expired offers
         if (filter === 'all') {
-            return !expired; // Only show non-expired offers
+            return !expired;
         }
         
-        // Fixed price offers - check multiple possible fields
+        // Fixed price offers
         if (filter === 'fixed') {
-            const isFixed = offer.offer_type === 'fixed' || 
-                           offer.service?.type === 'fixed' ||
-                           (!offer.offer_type && !offer.requires_consultation); // Default to fixed if no type specified
-            return isFixed && !expired; // Exclude expired
+            const isFixed = offer.offer_type === 'fixed' || offer.service?.type === 'fixed';
+            return isFixed && !expired;
         }
         
         // Dynamic price offers
         if (filter === 'dynamic') {
-            const isDynamic = offer.offer_type === 'dynamic' || 
-                             offer.service?.type === 'dynamic' ||
-                             offer.requires_consultation === true;
-            return isDynamic && !expired; // Exclude expired
+            const isDynamic = offer.offer_type === 'dynamic' || offer.service?.type === 'dynamic';
+            return isDynamic && !expired;
         }
         
-        // Active offers (non-expired and status is active)
+        // Active offers
         if (filter === 'active') {
             return offer.status === 'active' && !expired;
         }
@@ -191,9 +195,19 @@ const EnhancedOfferPage = () => {
             return expired;
         }
         
-        // Featured offers (non-expired)
+        // Featured offers
         if (filter === 'featured') {
             return offer.featured === true && !expired;
+        }
+
+        // NEW: Auto-confirm offers
+        if (filter === 'auto-confirm') {
+            return offer.service?.auto_confirm_bookings === true && !expired;
+        }
+
+        // NEW: Prepayment required offers
+        if (filter === 'prepayment') {
+            return offer.service?.require_prepayment === true && !expired;
         }
         
         return true;
@@ -203,28 +217,30 @@ const EnhancedOfferPage = () => {
         const expired = isOfferExpired(expiration_date);
         const effectiveStatus = expired ? 'expired' : status;
         
-        const statusClasses = {
-            active: 'bg-green-100 text-green-800',
-            inactive: 'bg-gray-100 text-gray-800',
-            expired: 'bg-red-100 text-red-800',
-            paused: 'bg-yellow-100 text-yellow-800'
+        const statusConfig = {
+            active: { bg: 'bg-green-100', text: 'text-green-800', label: 'Active' },
+            inactive: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Inactive' },
+            expired: { bg: 'bg-red-100', text: 'text-red-800', label: 'Expired' },
+            paused: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Paused' }
         };
+
+        const config = statusConfig[effectiveStatus] || statusConfig.inactive;
         
         return (
-            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusClasses[effectiveStatus] || statusClasses.inactive}`}>
-                {effectiveStatus}
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
+                {config.label}
             </span>
         );
     };
 
-    // FIXED: Enhanced offer type badge function
+    // Enhanced offer type badge with service info
     const getOfferTypeBadge = (offer) => {
         const isDynamic = offer.offer_type === 'dynamic' || 
                          offer.service?.type === 'dynamic' ||
                          offer.requires_consultation === true;
         
         return (
-            <span className={`px-2 py-1 text-xs font-semibold rounded-full flex items-center ${
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                 isDynamic 
                     ? 'bg-orange-100 text-orange-800' 
                     : 'bg-blue-100 text-blue-800'
@@ -244,6 +260,51 @@ const EnhancedOfferPage = () => {
         );
     };
 
+    // NEW: Get booking settings badges
+    const getBookingSettingsBadges = (service) => {
+        if (!service) return [];
+
+        const badges = [];
+
+        if (service.auto_confirm_bookings) {
+            badges.push({
+                icon: CheckCircle,
+                label: 'Auto-Confirm',
+                color: 'bg-green-50 text-green-700',
+                iconColor: 'text-green-600'
+            });
+        }
+
+        if (service.require_prepayment) {
+            badges.push({
+                icon: CreditCard,
+                label: 'Prepayment',
+                color: 'bg-blue-50 text-blue-700',
+                iconColor: 'text-blue-600'
+            });
+        }
+
+        if (service.allow_early_checkin) {
+            badges.push({
+                icon: UserCheck,
+                label: 'Early Check-in',
+                color: 'bg-purple-50 text-purple-700',
+                iconColor: 'text-purple-600'
+            });
+        }
+
+        if (service.auto_complete_on_duration) {
+            badges.push({
+                icon: Timer,
+                label: 'Auto-Complete',
+                color: 'bg-indigo-50 text-indigo-700',
+                iconColor: 'text-indigo-600'
+            });
+        }
+
+        return badges.slice(0, 3); // Show max 3 badges
+    };
+
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -252,7 +313,7 @@ const EnhancedOfferPage = () => {
         });
     };
 
-    // FIXED: Enhanced stats calculation that properly handles missing fields
+    // Enhanced stats calculation with new service data
     const calculateStats = () => {
         const total = offers.length;
         const nonExpired = offers.filter(offer => !isOfferExpired(offer.expiration_date));
@@ -261,7 +322,6 @@ const EnhancedOfferPage = () => {
         ).length;
         const expired = offers.filter(offer => isOfferExpired(offer.expiration_date)).length;
         
-        // Better logic for determining offer types
         const dynamic = offers.filter(offer => {
             const isDynamic = offer.offer_type === 'dynamic' || 
                              offer.service?.type === 'dynamic' ||
@@ -271,13 +331,21 @@ const EnhancedOfferPage = () => {
         
         const fixed = offers.filter(offer => {
             const isFixed = offer.offer_type === 'fixed' || 
-                           offer.service?.type === 'fixed' ||
-                           (!offer.offer_type && !offer.requires_consultation);
+                           offer.service?.type === 'fixed';
             return isFixed && !isOfferExpired(offer.expiration_date);
         }).length;
         
         const featured = offers.filter(offer => 
             offer.featured === true && !isOfferExpired(offer.expiration_date)
+        ).length;
+
+        // NEW: Booking settings stats
+        const autoConfirm = offers.filter(offer => 
+            offer.service?.auto_confirm_bookings === true && !isOfferExpired(offer.expiration_date)
+        ).length;
+
+        const requirePrepayment = offers.filter(offer => 
+            offer.service?.require_prepayment === true && !isOfferExpired(offer.expiration_date)
         ).length;
         
         const avgDiscount = nonExpired.length > 0 
@@ -285,12 +353,14 @@ const EnhancedOfferPage = () => {
             : 0;
 
         return { 
-            total: nonExpired.length, // Total non-expired offers
+            total: nonExpired.length,
             active, 
             expired, 
             dynamic, 
             fixed, 
             featured,
+            autoConfirm,
+            requirePrepayment,
             avgDiscount 
         };
     };
@@ -301,9 +371,11 @@ const EnhancedOfferPage = () => {
     if (loading) {
         return (
             <Layout title="Offers">
-                <div className="flex items-center justify-center py-8">
-                    <Loader className="w-6 h-6 animate-spin text-primary mr-2" />
-                    <span>Loading offers...</span>
+                <div className="flex items-center justify-center h-96">
+                    <div className="text-center">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+                        <p className="text-gray-600">Loading enhanced offers...</p>
+                    </div>
                 </div>
             </Layout>
         );
@@ -313,25 +385,27 @@ const EnhancedOfferPage = () => {
     if (!hasStore) {
         return (
             <Layout title="Offers">
-                <div className="flex flex-col items-center justify-center py-12">
+                <div className="flex items-center justify-center h-96">
                     <div className="text-center max-w-md">
-                        <Store className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Store Found</h3>
+                        <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <Store className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-3">No Store Found</h3>
                         <p className="text-gray-600 mb-6">
                             You need to create a store and services before you can manage offers. 
                             Offers are created from existing services.
                         </p>
                         {storeError && (
-                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                                 <p className="text-sm text-red-600">{storeError}</p>
                             </div>
                         )}
                         <div className="space-y-3">
                             <button
                                 onClick={() => window.location.href = '/dashboard/stores'}
-                                className="bg-primary text-white py-2 px-6 rounded-md hover:bg-primary-dark transition-colors flex items-center mx-auto"
+                                className="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
                             >
-                                <Plus className="w-4 h-4 mr-2" />
+                                <Plus className="w-4 h-4" />
                                 Create Your First Store
                             </button>
                             <button
@@ -349,95 +423,144 @@ const EnhancedOfferPage = () => {
 
     return (
         <Layout
-            title="Offers"
+            title="Enhanced Offers"
+            subtitle={`Manage your promotional offers with advanced booking settings - ${offers.length} total`}
+            showSearch={false}
             rightContent={
                 <button
                     onClick={() => setModalOpen(true)}
-                    className="bg-primary text-white py-2 px-6 text-sm font-semibold rounded-md shadow-md hover:bg-primary-dark transition duration-300 flex items-center gap-2"
+                    className="bg-blue-600 text-white py-2.5 px-4 text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                 >
                     <Plus className="w-4 h-4" />
                     Create Offer
                 </button>
             }
         >
-            <div className="space-y-6">
-                {/* Enhanced Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Active Offers</p>
-                                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-                                <p className="text-xs text-gray-500">Fixed: {stats.fixed} • Dynamic: {stats.dynamic}</p>
-                            </div>
-                            <Tag className="w-8 h-8 text-blue-500" />
+            {/* Enhanced Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+                <div className="bg-white rounded-xl border border-gray-100 p-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-600 mb-1">Active Offers</p>
+                            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                            <p className="text-xs text-gray-500 mt-1">Fixed: {stats.fixed} • Dynamic: {stats.dynamic}</p>
+                        </div>
+                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <Tag className="w-6 h-6 text-blue-600" />
                         </div>
                     </div>
-                    
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Available Now</p>
-                                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-                                <p className="text-xs text-gray-500">Ready for booking</p>
-                            </div>
-                            <CheckCircle className="w-8 h-8 text-green-500" />
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-100 p-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-600 mb-1">Available Now</p>
+                            <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                            <p className="text-xs text-gray-500 mt-1">Ready for booking</p>
                         </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Expired</p>
-                                <p className="text-2xl font-bold text-red-600">{stats.expired}</p>
-                                <p className="text-xs text-gray-500">Past expiration date</p>
-                            </div>
-                            <Calendar className="w-8 h-8 text-red-500" />
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Avg. Discount</p>
-                                <p className="text-2xl font-bold text-purple-600">{stats.avgDiscount}%</p>
-                                <p className="text-xs text-gray-500">Across active offers</p>
-                            </div>
-                            <TrendingUp className="w-8 h-8 text-purple-500" />
+                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                            <CheckCircle className="w-6 h-6 text-green-600" />
                         </div>
                     </div>
                 </div>
 
-                {/* Filter Section */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                            <Filter className="w-5 h-5 mr-2" />
-                            Filter Offers
-                        </h3>
-                        <span className="text-sm text-gray-500">
+                <div className="bg-white rounded-xl border border-gray-100 p-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-600 mb-1">Auto-Confirm</p>
+                            <p className="text-2xl font-bold text-purple-600">{stats.autoConfirm}</p>
+                            <p className="text-xs text-gray-500 mt-1">Instant booking</p>
+                        </div>
+                        <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                            <Shield className="w-6 h-6 text-purple-600" />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-100 p-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-600 mb-1">Prepayment</p>
+                            <p className="text-2xl font-bold text-orange-600">{stats.requirePrepayment}</p>
+                            <p className="text-xs text-gray-500 mt-1">Payment required</p>
+                        </div>
+                        <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                            <CreditCard className="w-6 h-6 text-orange-600" />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-100 p-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-600 mb-1">Avg. Discount</p>
+                            <p className="text-2xl font-bold text-red-600">{stats.avgDiscount}%</p>
+                            <p className="text-xs text-gray-500 mt-1">Across active offers</p>
+                        </div>
+                        <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                            <TrendingUp className="w-6 h-6 text-red-600" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Enhanced Search and Filter Section */}
+            <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <Filter className="w-5 h-5 text-gray-600" />
+                        Filter & Search Enhanced Offers
+                    </h3>
+                    <div className="flex items-center gap-3">
+                        <span className="text-sm text-gray-600">
                             Showing {filteredOffers.length} of {offers.length} offers
                         </span>
+                        <button
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </button>
                     </div>
-                    
+                </div>
+                
+                <div className="space-y-4">
+                    {/* Search Bar */}
+                    <div className="relative max-w-md">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="Search offers and services..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+
+                    {/* Enhanced Filter Buttons */}
                     <div className="flex flex-wrap gap-2">
                         {[
-                            { key: 'all', label: 'Active Offers', count: stats.total },
-                            { key: 'active', label: 'Available Now', count: stats.active },
-                            { key: 'fixed', label: 'Fixed Price', count: stats.fixed },
-                            { key: 'dynamic', label: 'Dynamic Price', count: stats.dynamic },
-                            { key: 'featured', label: 'Featured', count: stats.featured },
-                            { key: 'expired', label: 'Expired', count: stats.expired }
-                        ].map(({ key, label, count }) => (
+                            { key: 'all', label: 'Active Offers', count: stats.total, icon: Tag },
+                            { key: 'active', label: 'Available Now', count: stats.active, icon: CheckCircle },
+                            { key: 'fixed', label: 'Fixed Price', count: stats.fixed, icon: DollarSign },
+                            { key: 'dynamic', label: 'Dynamic Price', count: stats.dynamic, icon: Calculator },
+                            { key: 'auto-confirm', label: 'Auto-Confirm', count: stats.autoConfirm, icon: Shield },
+                            { key: 'prepayment', label: 'Prepayment', count: stats.requirePrepayment, icon: CreditCard },
+                            { key: 'featured', label: 'Featured', count: stats.featured, icon: Star },
+                            { key: 'expired', label: 'Expired', count: stats.expired, icon: Calendar }
+                        ].map(({ key, label, count, icon: Icon }) => (
                             <button
                                 key={key}
                                 onClick={() => setFilter(key)}
-                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                     filter === key
-                                        ? 'bg-primary text-white'
+                                        ? 'bg-blue-600 text-white'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                             >
+                                <Icon className="w-4 h-4" />
                                 {label} ({count})
                             </button>
                         ))}
@@ -446,192 +569,273 @@ const EnhancedOfferPage = () => {
 
                 {/* Error Message */}
                 {storeError && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                         <div className="flex items-center">
                             <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
                             <span className="text-yellow-800">{storeError}</span>
                         </div>
                     </div>
                 )}
+            </div>
 
-                {/* Offers Table */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full">
-                            <thead className="bg-gray-50 border-b border-gray-200">
-                                <tr>
-                                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Offer Details
-                                    </th>
-                                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Service & Type
-                                    </th>
-                                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Discount
-                                    </th>
-                                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Expiration
-                                    </th>
-                                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Status
-                                    </th>
-                                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {filteredOffers?.length > 0 ? (
-                                    filteredOffers.map((offer) => {
-                                        const expired = isOfferExpired(offer.expiration_date);
-                                        const effectiveStatus = expired ? 'expired' : offer.status;
-                                        const isDynamic = offer.offer_type === 'dynamic' || 
-                                                         offer.service?.type === 'dynamic' ||
-                                                         offer.requires_consultation === true;
-                                        
-                                        return (
-                                            <tr key={offer.id} className="hover:bg-gray-50">
-                                                <td className="py-4 px-6">
-                                                    <div>
-                                                        <div className="flex items-center">
-                                                            <h3 className="text-sm font-medium text-gray-900">
-                                                                {offer.title || offer.service?.name || 'Special Offer'}
-                                                            </h3>
-                                                            {offer.featured && (
-                                                                <Star className="ml-2 w-4 h-4 text-yellow-500 fill-current" />
-                                                            )}
-                                                        </div>
-                                                        <p className="text-sm text-gray-500 mt-1">
-                                                            {offer.description?.substring(0, 60)}
-                                                            {offer.description?.length > 60 && '...'}
-                                                        </p>
-                                                        {isDynamic && offer.discount_explanation && (
-                                                            <p className="text-xs text-orange-600 mt-1 italic">
-                                                                {offer.discount_explanation.substring(0, 80)}...
-                                                            </p>
+            {/* Enhanced Offers Grid */}
+            <div className="space-y-6">
+                {filteredOffers?.length > 0 ? (
+                    <div className="grid gap-6">
+                        {filteredOffers.map((offer) => {
+                            const expired = isOfferExpired(offer.expiration_date);
+                            const isDynamic = offer.offer_type === 'dynamic' || 
+                                             offer.service?.type === 'dynamic' ||
+                                             offer.requires_consultation === true;
+                            const bookingBadges = getBookingSettingsBadges(offer.service);
+                            
+                            return (
+                                <div key={offer.id} className="bg-white rounded-xl border border-gray-100 p-6 hover:shadow-lg transition-all duration-200">
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                                        {/* Enhanced Offer Details */}
+                                        <div className="flex-1 space-y-4">
+                                            {/* Header with enhanced badges */}
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <h3 className="text-lg font-semibold text-gray-900">
+                                                            {offer.title || offer.service?.name || 'Special Offer'}
+                                                        </h3>
+                                                        {offer.featured && (
+                                                            <Star className="w-5 h-5 text-yellow-500 fill-current" />
                                                         )}
                                                     </div>
-                                                </td>
-                                                <td className="py-4 px-6">
-                                                    <div className="space-y-2">
-                                                        <div>
-                                                            <p className="text-sm font-medium text-gray-900">
-                                                                {offer.service?.name || 'Unknown Service'}
-                                                            </p>
-                                                            <div className="flex items-center space-x-2 mt-1">
-                                                                {getOfferTypeBadge(offer)}
-                                                                {offer.requires_consultation && (
-                                                                    <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center">
-                                                                        <Users className="w-3 h-3 mr-1" />
-                                                                        Consultation
-                                                                    </span>
+                                                    <p className="text-gray-600 text-sm">
+                                                        {offer.description}
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    {getStatusBadge(offer.status, offer.expiration_date)}
+                                                    {getOfferTypeBadge(offer)}
+                                                </div>
+                                            </div>
+
+                                            {/* Service Details with enhanced booking info */}
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <Store className="w-4 h-4 text-gray-500" />
+                                                    <span className="text-sm font-medium text-gray-900">
+                                                        {offer.service?.name || 'Unknown Service'}
+                                                    </span>
+                                                </div>
+                                                
+                                                {offer.service && (
+                                                    <div className="text-sm text-gray-600">
+                                                        {isDynamic ? (
+                                                            <span>{offer.service.price_range || 'Price varies'}</span>
+                                                        ) : (
+                                                            <>
+                                                                <span>KES {offer.service.price || 'N/A'}</span>
+                                                                {offer.service.duration && (
+                                                                    <span> • {offer.service.duration}min</span>
                                                                 )}
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        {offer.service && (
-                                                            <div className="text-xs text-gray-500">
-                                                                {isDynamic ? (
-                                                                    <span>{offer.service.price_range || 'Price varies'}</span>
-                                                                ) : (
-                                                                    <>
-                                                                        <span>KES {offer.service.price || 'N/A'}</span>
-                                                                        {offer.service.duration && (
-                                                                            <span> • {offer.service.duration}min</span>
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                            </div>
+                                                            </>
                                                         )}
                                                     </div>
-                                                </td>
-                                                <td className="py-4 px-6">
+                                                )}
+
+                                                {offer.requires_consultation && (
+                                                    <div className="flex items-center gap-1">
+                                                        <Users className="w-4 h-4 text-purple-600" />
+                                                        <span className="text-sm text-purple-600 font-medium">Consultation Required</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* NEW: Booking Settings Display */}
+                                            {bookingBadges.length > 0 && (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {bookingBadges.map((badge, index) => (
+                                                        <div
+                                                            key={index}
+                                                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
+                                                        >
+                                                            <badge.icon className={`w-3 h-3 ${badge.iconColor}`} />
+                                                            {badge.label}
+                                                        </div>
+                                                    ))}
+                                                    {offer.service?.confirmation_message && (
+                                                        <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-700">
+                                                            <MessageSquare className="w-3 h-3 text-gray-600" />
+                                                            Custom Message
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Enhanced Discount Info */}
+                                            <div className="bg-green-50 rounded-lg p-4">
+                                                <div className="flex items-center justify-between">
                                                     <div>
-                                                        <p className="text-sm font-bold text-green-600">
+                                                        <p className="text-lg font-bold text-green-700">
                                                             {offer.discount}% OFF
                                                         </p>
                                                         {!isDynamic && offer.service?.price && (
-                                                            <p className="text-xs text-gray-500">
+                                                            <p className="text-sm text-green-600">
                                                                 Save KES {((offer.service.price * offer.discount) / 100).toFixed(2)}
                                                             </p>
                                                         )}
-                                                        {isDynamic && (
-                                                            <p className="text-xs text-orange-600">
-                                                                Off final quote
+                                                        {isDynamic && offer.discount_explanation && (
+                                                            <p className="text-sm text-orange-600">
+                                                                {offer.discount_explanation}
+                                                            </p>
+                                                        )}
+                                                        {isDynamic && !offer.discount_explanation && (
+                                                            <p className="text-sm text-orange-600">
+                                                                Off final quoted price
                                                             </p>
                                                         )}
                                                     </div>
-                                                </td>
-                                                <td className="py-4 px-6">
-                                                    <div className="flex items-center">
-                                                        <Calendar className="w-4 h-4 text-gray-400 mr-1" />
-                                                        <span className={`text-sm ${expired ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
-                                                            {formatDate(offer.expiration_date)}
-                                                        </span>
+                                                    <div className="text-right">
+                                                        <div className="flex items-center text-gray-600">
+                                                            <Calendar className="w-4 h-4 mr-1" />
+                                                            <span className={`text-sm ${expired ? 'text-red-600 font-medium' : ''}`}>
+                                                                Expires {formatDate(offer.expiration_date)}
+                                                            </span>
+                                                        </div>
+                                                        {expired && (
+                                                            <p className="text-sm text-red-500 mt-1 font-medium">Expired</p>
+                                                        )}
                                                     </div>
-                                                    {expired && (
-                                                        <p className="text-xs text-red-500 mt-1">Expired</p>
-                                                    )}
-                                                </td>
-                                                <td className="py-4 px-6">
-                                                    {getStatusBadge(offer.status, offer.expiration_date)}
-                                                </td>
-                                                <td className="py-4 px-6">
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => handleEditClick(offer)}
-                                                            className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
-                                                            title="Edit offer"
-                                                        >
-                                                            <Edit className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteClick(offer)}
-                                                            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
-                                                            title="Delete offer"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                </div>
+
+                                                {/* NEW: Service-specific booking info */}
+                                                {offer.service && (
+                                                    <div className="mt-3 pt-3 border-t border-green-200">
+                                                        <div className="flex flex-wrap gap-3 text-xs">
+                                                            {offer.service.auto_confirm_bookings && (
+                                                                <div className="flex items-center gap-1 text-green-700">
+                                                                    <CheckCircle className="w-3 h-3" />
+                                                                    <span>Instant confirmation</span>
+                                                                </div>
+                                                            )}
+                                                            {offer.service.require_prepayment && (
+                                                                <div className="flex items-center gap-1 text-blue-700">
+                                                                    <CreditCard className="w-3 h-3" />
+                                                                    <span>Prepayment required</span>
+                                                                </div>
+                                                            )}
+                                                            {offer.service.allow_early_checkin && (
+                                                                <div className="flex items-center gap-1 text-purple-700">
+                                                                    <UserCheck className="w-3 h-3" />
+                                                                    <span>Early check-in: {offer.service.early_checkin_minutes || 15}min</span>
+                                                                </div>
+                                                            )}
+                                                            {offer.service.min_cancellation_hours && (
+                                                                <div className="flex items-center gap-1 text-orange-700">
+                                                                    <Clock className="w-3 h-3" />
+                                                                    <span>Cancel: {offer.service.min_cancellation_hours}h notice</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                ) : (
-                                    <tr>
-                                        <td colSpan="6" className="py-8 px-6 text-center">
-                                            <div className="flex flex-col items-center">
-                                                <Tag className="w-12 h-12 text-gray-300 mb-4" />
-                                                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                                    {filter === 'all' ? 'No active offers yet' : `No ${filter} offers found`}
-                                                </h3>
-                                                <p className="text-gray-500 mb-4">
-                                                    {filter === 'all' 
-                                                        ? 'Create your first offer to attract more customers'
-                                                        : `Try selecting a different filter or create new offers`
-                                                    }
-                                                </p>
-                                                <button
-                                                    onClick={() => setModalOpen(true)}
-                                                    className="bg-primary text-white py-2 px-4 rounded-md hover:bg-primary-dark transition-colors"
-                                                >
-                                                    Create Your First Offer
-                                                </button>
+                                                )}
+
+                                                {/* Terms and conditions */}
+                                                {offer.terms_conditions && (
+                                                    <div className="mt-3 pt-3 border-t border-green-200">
+                                                        <div className="flex items-start gap-2">
+                                                            <Info className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                                            <div>
+                                                                <p className="text-sm font-medium text-green-900">Terms & Conditions</p>
+                                                                <p className="text-sm text-green-700 mt-1">{offer.terms_conditions}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => handleEditClick(offer)}
+                                                className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteClick(offer)}
+                                                className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* NEW: Advanced service info expandable section */}
+                                    {(offer.service?.confirmation_message || offer.service?.cancellation_policy) && (
+                                        <div className="mt-4 pt-4 border-t border-gray-100">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {offer.service.confirmation_message && (
+                                                    <div className="bg-blue-50 p-3 rounded-lg">
+                                                        <div className="flex items-start gap-2">
+                                                            <MessageSquare className="w-4 h-4 text-blue-600 mt-0.5" />
+                                                            <div>
+                                                                <p className="text-sm font-medium text-blue-900">Confirmation Message</p>
+                                                                <p className="text-xs text-blue-700 mt-1">{offer.service.confirmation_message}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {offer.service.cancellation_policy && (
+                                                    <div className="bg-orange-50 p-3 rounded-lg">
+                                                        <div className="flex items-start gap-2">
+                                                            <Info className="w-4 h-4 text-orange-600 mt-0.5" />
+                                                            <div>
+                                                                <p className="text-sm font-medium text-orange-900">Cancellation Policy</p>
+                                                                <p className="text-xs text-orange-700 mt-1">{offer.service.cancellation_policy}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
-                </div>
+                ) : (
+                    <div className="bg-white rounded-xl border border-gray-100 p-12">
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                <Tag className="w-8 h-8 text-gray-400" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                                {filter === 'all' ? 'No active offers yet' : `No ${filter} offers found`}
+                            </h3>
+                            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                                {filter === 'all' 
+                                    ? 'Create your first offer to attract more customers with special promotions and advanced booking features'
+                                    : `Try selecting a different filter or create new offers with enhanced service settings`
+                                }
+                            </p>
+                            <button
+                                onClick={() => setModalOpen(true)}
+                                className="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Create Enhanced Offer
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Create/Edit Offer Modal */}
+            {/* Create/Edit Enhanced Offer Modal */}
             <Modal 
                 isOpen={isModalOpen} 
                 onClose={closeModal} 
-                title={editingOffer ? 'Edit Offer' : 'Create Offer'}
+                title={editingOffer ? 'Edit Enhanced Offer' : 'Create Enhanced Offer'}
                 size="xl"
             >
                 <EnhancedOfferForm 
@@ -646,27 +850,42 @@ const EnhancedOfferPage = () => {
                 <Modal 
                     isOpen={true} 
                     onClose={() => setDeleteConfirm(null)} 
-                    title="Delete Offer"
+                    title="Delete Enhanced Offer"
                 >
                     <div className="p-6">
                         <div className="flex items-center text-red-600 mb-4">
                             <AlertCircle className="w-6 h-6 mr-2" />
                             <span className="font-medium">Are you sure?</span>
                         </div>
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-gray-600 mb-4">
                             This will permanently delete the offer "{deleteConfirm.title || deleteConfirm.service?.name}". 
                             This action cannot be undone and will affect any existing bookings.
                         </p>
+                        {deleteConfirm.service && (
+                            <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                                <h4 className="text-sm font-medium text-blue-900 mb-2">Associated Service Settings:</h4>
+                                <div className="text-sm text-blue-700 space-y-1">
+                                    <p>• Service: {deleteConfirm.service.name}</p>
+                                    <p>• Type: {deleteConfirm.service.type || 'Fixed'}</p>
+                                    {deleteConfirm.service.auto_confirm_bookings && (
+                                        <p>• Auto-confirmation enabled</p>
+                                    )}
+                                    {deleteConfirm.service.require_prepayment && (
+                                        <p>• Prepayment required</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                         <div className="flex justify-end space-x-3">
                             <button
                                 onClick={() => setDeleteConfirm(null)}
-                                className="bg-gray-300 text-black py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={() => handleDeleteOffer(deleteConfirm.id)}
-                                className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition-colors"
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                             >
                                 Delete Offer
                             </button>

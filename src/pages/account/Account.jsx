@@ -4,6 +4,30 @@ import Layout from '../../elements/Layout';
 import merchantAuthService from '../../services/merchantAuthService';
 import BranchManagement from '../../components/BranchManagement';
 import { uploadStoreLogo, updateStoreProfile } from '../../services/api_service';
+import {
+    User,
+    Store,
+    Shield,
+    CreditCard,
+    Activity,
+    Camera,
+    MapPin,
+    Phone,
+    Mail,
+    Globe,
+    Clock,
+    Calendar,
+    Settings,
+    CheckCircle,
+    AlertCircle,
+    Upload,
+    X,
+    Edit3,
+    Save,
+    Building2,
+    Briefcase,
+    LogOut
+} from 'lucide-react';
 
 const AccountPage = () => {
     const [activeTab, setActiveTab] = useState(0);
@@ -92,10 +116,6 @@ const AccountPage = () => {
                     websiteUrl: merchantProfile.store.website_url || '',
                     logoUrl: merchantProfile.store.logo_url || merchantProfile.store.logo || ''
                 });
-
-
-                
-                
                 
                 // Set logo preview if exists
                 if (merchantProfile.store.logo_url || merchantProfile.store.logo) {
@@ -123,13 +143,11 @@ const AccountPage = () => {
     const handleLogoChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            // Validate file type
             if (!file.type.startsWith('image/')) {
                 toast.error('Please select a valid image file');
                 return;
             }
             
-            // Validate file size (max 5MB)
             if (file.size > 5 * 1024 * 1024) {
                 toast.error('Image size should be less than 5MB');
                 return;
@@ -137,7 +155,6 @@ const AccountPage = () => {
             
             setLogoFile(file);
             
-            // Create preview
             const reader = new FileReader();
             reader.onload = (e) => {
                 setLogoPreview(e.target.result);
@@ -161,30 +178,22 @@ const AccountPage = () => {
         try {
             setLogoUploading(true);
             
-            console.log('DEBUG: Starting logo upload for store:', merchantInfo.store.id);
-            
-            // Upload the logo
             const uploadResult = await uploadStoreLogo(logoFile);
             
             if (!uploadResult.success || !uploadResult.logoUrl) {
                 throw new Error('Failed to upload logo');
             }
             
-            console.log('DEBUG: Logo uploaded successfully:', uploadResult.logoUrl);
-            
-            // Update store with new logo URL
             const updateResult = await updateStoreProfile(merchantInfo.store.id, {
                 logo_url: uploadResult.logoUrl
             });
             
             if (updateResult && updateResult.success !== false) {
-                // Update local state
                 setStoreData(prev => ({
                     ...prev,
                     logoUrl: uploadResult.logoUrl
                 }));
                 
-                // Refresh merchant info
                 await getMerchantInfo();
                 
                 setEditingLogo(false);
@@ -212,13 +221,11 @@ const AccountPage = () => {
         try {
             setLogoUploading(true);
             
-            // Update store to remove logo
             const updateResult = await updateStoreProfile(merchantInfo.store.id, {
                 logo_url: null
             });
             
             if (updateResult && updateResult.success !== false) {
-                // Update local state
                 setStoreData(prev => ({
                     ...prev,
                     logoUrl: ''
@@ -228,7 +235,6 @@ const AccountPage = () => {
                 setLogoFile(null);
                 setEditingLogo(false);
                 
-                // Refresh merchant info
                 await getMerchantInfo();
                 
                 toast.success('Store logo removed successfully!');
@@ -249,7 +255,6 @@ const AccountPage = () => {
         try {
             setLoading(true);
             
-            // Update merchant profile using the current merchant ID
             const updateResponse = await merchantAuthService.updateMerchantProfile(null, {
                 first_name: profileData.firstName,
                 last_name: profileData.lastName,
@@ -258,7 +263,6 @@ const AccountPage = () => {
             });
 
             if (updateResponse && (updateResponse.success !== false)) {
-                // Refresh merchant info
                 await getMerchantInfo();
                 setEditingProfile(false);
                 toast.success('Profile updated successfully!');
@@ -274,12 +278,11 @@ const AccountPage = () => {
         }
     };
 
-    // Handle store update (main branch info)
+    // Handle store update
     const handleStoreUpdate = async () => {
         try {
             setLoading(true);
             
-            // Update store information (which serves as main branch)
             const updateResponse = await merchantAuthService.updateStoreProfile(merchantInfo.store.id, {
                 name: storeData.name,
                 location: storeData.location,
@@ -293,10 +296,9 @@ const AccountPage = () => {
             });
 
             if (updateResponse && (updateResponse.success !== false)) {
-                // Refresh merchant info
                 await getMerchantInfo();
                 setEditingStore(false);
-                toast.success('Store information updated successfully! This updates your main branch.');
+                toast.success('Store information updated successfully!');
             } else {
                 throw new Error(updateResponse?.message || 'Failed to update store');
             }
@@ -309,7 +311,7 @@ const AccountPage = () => {
         }
     };
 
-    // Handle working days change for store
+    // Handle working days change
     const handleStoreWorkingDaysChange = (day) => {
         setStoreData(prev => ({
             ...prev,
@@ -322,7 +324,6 @@ const AccountPage = () => {
     // Handle branches update callback
     const handleBranchesUpdate = (updatedBranches) => {
         setBranches(updatedBranches);
-        console.log('Branches updated:', updatedBranches.length, 'branches');
     };
 
     const handleLogout = () => {
@@ -334,214 +335,279 @@ const AccountPage = () => {
     }, []);
 
     const tabs = [
-        { name: 'Profile', icon: '👤' },
-        { name: 'Store & Branches', icon: '🏪' },
-        { name: 'Security', icon: '🔒' },
-        { name: 'Subscription', icon: '💳' },
-        { name: 'Activity', icon: '📊' }
+        { name: 'Profile', icon: User, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+        { name: 'Business', icon: Store, color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
+        { name: 'Security', icon: Shield, color: 'text-amber-600', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' },
+        { name: 'Billing', icon: CreditCard, color: 'text-purple-600', bgColor: 'bg-purple-50', borderColor: 'border-purple-200' },
+        { name: 'Activity', icon: Activity, color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' }
     ];
 
     const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     // Loading component
     const LoadingSpinner = () => (
-        <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-2 text-gray-600">Loading...</span>
+        <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+                <div className="relative">
+                    <div className="w-16 h-16 border-4 border-gray-200 rounded-full"></div>
+                    <div className="absolute top-0 left-0 w-16 h-16 border-4 border-blue-600 rounded-full animate-spin border-t-transparent"></div>
+                </div>
+                <p className="mt-4 text-gray-600 font-medium">Loading your account...</p>
+            </div>
         </div>
     );
 
     // Error component
     const ErrorMessage = ({ message, onRetry }) => (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <div className="text-red-600 mb-4">
-                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-            <h3 className="text-lg font-medium text-red-900 mb-2">Error Loading Profile</h3>
-            <p className="text-red-700 mb-4">{message}</p>
+        <div className="rounded-xl border-2 border-red-200 bg-red-50 p-8 text-center">
+            <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+            <h3 className="text-lg font-semibold text-red-900 mb-2">Unable to Load Account</h3>
+            <p className="text-red-700 mb-6">{message}</p>
             <button
                 onClick={onRetry}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
             >
                 Try Again
             </button>
         </div>
     );
 
+    const ProfileCard = ({ merchant }) => (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 text-white">
+            <div className="relative z-10">
+                <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-4">
+                        <div className="relative">
+                            <div className="h-16 w-16 rounded-2xl bg-white bg-opacity-20 flex items-center justify-center">
+                                {storeData.logoUrl || logoPreview ? (
+                                    <img 
+                                        src={logoPreview || storeData.logoUrl} 
+                                        alt="Store logo" 
+                                        className="h-12 w-12 rounded-xl object-cover"
+                                    />
+                                ) : (
+                                    <Building2 className="h-8 w-8 text-white" />
+                                )}
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-green-400 border-2 border-white"></div>
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold">{merchant?.store?.name || 'Your Business'}</h2>
+                            <p className="text-indigo-100 flex items-center mt-1">
+                                <MapPin className="h-4 w-4 mr-1" />
+                                {merchant?.store?.location || 'Location not set'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <div className="rounded-lg bg-white bg-opacity-10 px-3 py-1 text-sm font-medium">
+                            Professional Plan
+                        </div>
+                    </div>
+                </div>
+                <div className="mt-6 grid grid-cols-3 gap-4">
+                    <div className="rounded-lg bg-white bg-opacity-10 p-3 text-center">
+                        <div className="text-2xl font-bold">{branches.length + 1}</div>
+                        <div className="text-sm text-indigo-100">Branches</div>
+                    </div>
+                    <div className="rounded-lg bg-white bg-opacity-10 p-3 text-center">
+                        <div className="text-2xl font-bold">4.8</div>
+                        <div className="text-sm text-indigo-100">Rating</div>
+                    </div>
+                    <div className="rounded-lg bg-white bg-opacity-10 p-3 text-center">
+                        <div className="text-2xl font-bold">2.5k</div>
+                        <div className="text-sm text-indigo-100">Customers</div>
+                    </div>
+                </div>
+            </div>
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white bg-opacity-10"></div>
+            <div className="absolute bottom-0 left-0 -mb-8 -ml-8 h-32 w-32 rounded-full bg-white bg-opacity-5"></div>
+        </div>
+    );
+
     return (
         <Layout 
-            title={`Good Day, ${merchantInfo?.first_name || 'Merchant'} 👋`}
-            subtitle="Manage your merchant account and business information"
+            title="Account Settings"
+            subtitle="Manage your business profile and account preferences"
         >
-            <div className="min-h-screen bg-gray-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    {/* Header */}
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
-                        <p className="text-gray-600 mt-2">Manage your merchant account and business information</p>
-                    </div>
+            <div className="space-y-8">
+                {/* Header Profile Card */}
+                {merchantInfo && !loading && !error && <ProfileCard merchant={merchantInfo} />}
 
-                    <div className="flex flex-col lg:flex-row gap-8">
-                        {/* Sidebar Navigation */}
-                        <div className="lg:w-64">
-                            <nav className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                                <div className="space-y-2">
-                                    {tabs.map((tab, index) => (
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    {/* Navigation Sidebar */}
+                    <div className="lg:col-span-1">
+                        <div className="sticky top-6">
+                            <nav className="space-y-2">
+                                {tabs.map((tab, index) => {
+                                    const Icon = tab.icon;
+                                    const isActive = activeTab === index;
+                                    
+                                    return (
                                         <button
                                             key={index}
-                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 ${activeTab === index
-                                                ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500'
-                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                                }`}
                                             onClick={() => setActiveTab(index)}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl font-medium transition-all duration-200 ${
+                                                isActive
+                                                    ? `${tab.bgColor} ${tab.color} ${tab.borderColor} border`
+                                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                            }`}
                                         >
-                                            <span className="text-lg">{tab.icon}</span>
-                                            <span className="font-medium">{tab.name}</span>
+                                            <Icon className="h-5 w-5 flex-shrink-0" />
+                                            <span>{tab.name}</span>
                                         </button>
-                                    ))}
-                                </div>
+                                    );
+                                })}
                                 
                                 {/* Logout Button */}
-                                <div className="mt-6 pt-6 border-t border-gray-200">
+                                <div className="pt-4 mt-4 border-t border-gray-200">
                                     <button
                                         onClick={handleLogout}
-                                        className="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200"
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl font-medium text-red-600 hover:bg-red-50 transition-all duration-200"
                                     >
-                                        <span className="text-lg">🚪</span>
-                                        <span className="font-medium">Logout</span>
+                                        <LogOut className="h-5 w-5 flex-shrink-0" />
+                                        <span>Sign Out</span>
                                     </button>
                                 </div>
                             </nav>
                         </div>
+                    </div>
 
-                        {/* Main Content */}
-                        <div className="flex-1">
-                            {/* Profile Tab */}
-                            {activeTab === 0 && (
-                                <div className="space-y-6">
-                                    {loading && <LoadingSpinner />}
+                    {/* Main Content */}
+                    <div className="lg:col-span-3">
+                        {loading && <LoadingSpinner />}
 
-                                    {error && (
-                                        <ErrorMessage
-                                            message={error}
-                                            onRetry={getMerchantInfo}
-                                        />
-                                    )}
+                        {error && (
+                            <ErrorMessage
+                                message={error}
+                                onRetry={getMerchantInfo}
+                            />
+                        )}
 
-                                    {merchantInfo && !loading && !error && (
-                                        <>
-                                            {/* Business Overview Card */}
-                                            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
+                        {merchantInfo && !loading && !error && (
+                            <>
+                                {/* Profile Tab */}
+                                {activeTab === 0 && (
+                                    <div className="space-y-6">
+                                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
                                                 <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <h2 className="text-2xl font-bold">{merchantInfo.store?.name || 'Your Store'}</h2>
-                                                        <p className="text-blue-100 mt-1">{merchantInfo.store?.location || 'Location not set'}</p>
-                                                        <p className="text-blue-100 text-sm mt-2">
-                                                            Member since {new Date(merchantInfo.joined).toLocaleDateString()}
-                                                        </p>
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                                            <User className="h-5 w-5 text-blue-600" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+                                                            <p className="text-sm text-gray-600">Update your personal details</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <div className="text-3xl">🏪</div>
-                                                        <p className="text-sm text-blue-100 mt-1">
-                                                            {branches.length} Branch{branches.length !== 1 ? 'es' : ''}
-                                                        </p>
-                                                    </div>
+                                                    <button
+                                                        onClick={() => setEditingProfile(!editingProfile)}
+                                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                                                            editingProfile
+                                                                ? 'text-gray-600 hover:bg-gray-100'
+                                                                : 'text-blue-600 hover:bg-blue-50'
+                                                        }`}
+                                                        disabled={loading}
+                                                    >
+                                                        {editingProfile ? (
+                                                            <>
+                                                                <X className="h-4 w-4" />
+                                                                Cancel
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Edit3 className="h-4 w-4" />
+                                                                Edit
+                                                            </>
+                                                        )}
+                                                    </button>
                                                 </div>
                                             </div>
 
-                                            {/* Personal Information */}
-                                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                                <div className="flex items-center justify-between mb-6">
-                                                    <h3 className="text-xl font-semibold text-gray-900">Personal Information</h3>
-                                                    <button
-                                                        onClick={() => setEditingProfile(!editingProfile)}
-                                                        className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                        disabled={loading}
-                                                    >
-                                                        {editingProfile ? 'Cancel' : 'Edit'}
-                                                    </button>
-                                                </div>
-
+                                            <div className="p-6">
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <div className="space-y-4">
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                                                            {editingProfile ? (
-                                                                <input
-                                                                    type="text"
-                                                                    value={profileData.firstName}
-                                                                    onChange={(e) => setProfileData({...profileData, firstName: e.target.value})}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                />
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{merchantInfo.first_name}</p>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                                                            {editingProfile ? (
-                                                                <input
-                                                                    type="text"
-                                                                    value={profileData.lastName}
-                                                                    onChange={(e) => setProfileData({...profileData, lastName: e.target.value})}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                />
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{merchantInfo.last_name}</p>
-                                                            )}
-                                                        </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-700">First Name</label>
+                                                        {editingProfile ? (
+                                                            <input
+                                                                type="text"
+                                                                value={profileData.firstName}
+                                                                onChange={(e) => setProfileData({...profileData, firstName: e.target.value})}
+                                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                                                                disabled={loading}
+                                                            />
+                                                        ) : (
+                                                            <p className="text-gray-900 py-3 font-medium">{merchantInfo.first_name || 'Not set'}</p>
+                                                        )}
                                                     </div>
-
-                                                    <div className="space-y-4">
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                                                            {editingProfile ? (
-                                                                <input
-                                                                    type="email"
-                                                                    value={profileData.email}
-                                                                    onChange={(e) => setProfileData({...profileData, email: e.target.value})}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                />
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{merchantInfo.email_address}</p>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                                                            {editingProfile ? (
-                                                                <input
-                                                                    type="tel"
-                                                                    value={profileData.phoneNumber}
-                                                                    onChange={(e) => setProfileData({...profileData, phoneNumber: e.target.value})}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                />
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{merchantInfo.phone_number}</p>
-                                                            )}
-                                                        </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-700">Last Name</label>
+                                                        {editingProfile ? (
+                                                            <input
+                                                                type="text"
+                                                                value={profileData.lastName}
+                                                                onChange={(e) => setProfileData({...profileData, lastName: e.target.value})}
+                                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                                                                disabled={loading}
+                                                            />
+                                                        ) : (
+                                                            <p className="text-gray-900 py-3 font-medium">{merchantInfo.last_name || 'Not set'}</p>
+                                                        )}
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-700">Email Address</label>
+                                                        {editingProfile ? (
+                                                            <input
+                                                                type="email"
+                                                                value={profileData.email}
+                                                                onChange={(e) => setProfileData({...profileData, email: e.target.value})}
+                                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                                                                disabled={loading}
+                                                            />
+                                                        ) : (
+                                                            <p className="text-gray-900 py-3 font-medium flex items-center">
+                                                                <Mail className="h-4 w-4 mr-2 text-gray-500" />
+                                                                {merchantInfo.email_address || 'Not set'}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-700">Phone Number</label>
+                                                        {editingProfile ? (
+                                                            <input
+                                                                type="tel"
+                                                                value={profileData.phoneNumber}
+                                                                onChange={(e) => setProfileData({...profileData, phoneNumber: e.target.value})}
+                                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                                                                disabled={loading}
+                                                            />
+                                                        ) : (
+                                                            <p className="text-gray-900 py-3 font-medium flex items-center">
+                                                                <Phone className="h-4 w-4 mr-2 text-gray-500" />
+                                                                {merchantInfo.phone_number || 'Not set'}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
 
                                                 {editingProfile && (
-                                                    <div className="flex gap-3 mt-6">
+                                                    <div className="flex gap-3 mt-8 pt-6 border-t border-gray-200">
                                                         <button 
                                                             onClick={handleProfileUpdate}
                                                             disabled={loading}
-                                                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                                            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
                                                             {loading ? (
                                                                 <>
-                                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                                                     Saving...
                                                                 </>
                                                             ) : (
-                                                                'Save Changes'
+                                                                <>
+                                                                    <Save className="h-4 w-4" />
+                                                                    Save Changes
+                                                                </>
                                                             )}
                                                         </button>
                                                         <button
@@ -558,92 +624,107 @@ const AccountPage = () => {
                                                                 });
                                                             }}
                                                             disabled={loading}
-                                                            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                                                            className="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
                                                         >
                                                             Cancel
                                                         </button>
                                                     </div>
                                                 )}
                                             </div>
-                                        </>
-                                    )}
-                                </div>
-                            )}
+                                        </div>
+                                    </div>
+                                )}
 
-                            {/* Store & Branches Tab */}
-                            {activeTab === 1 && (
-                                <div className="space-y-6">
-                                    {loading && <LoadingSpinner />}
-
-                                    {merchantInfo && !loading && !error && (
-                                        <>
-                                            {/* Store Logo Section */}
-                                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                                <div className="flex items-center justify-between mb-6">
-                                                    <div>
-                                                        <h3 className="text-xl font-semibold text-gray-900">Store Logo</h3>
-                                                        <p className="text-sm text-gray-600 mt-1">Upload or update your store logo</p>
+                                {/* Business Tab */}
+                                {activeTab === 1 && (
+                                    <div className="space-y-6">
+                                        {/* Logo Upload Section */}
+                                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-gray-200">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+                                                            <Camera className="h-5 w-5 text-green-600" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-lg font-semibold text-gray-900">Business Logo</h3>
+                                                            <p className="text-sm text-gray-600">Upload your brand logo</p>
+                                                        </div>
                                                     </div>
                                                     <button
                                                         onClick={() => setEditingLogo(!editingLogo)}
-                                                        className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                                                            editingLogo
+                                                                ? 'text-gray-600 hover:bg-gray-100'
+                                                                : 'text-green-600 hover:bg-green-50'
+                                                        }`}
                                                         disabled={logoUploading}
                                                     >
-                                                        {editingLogo ? 'Cancel' : 'Edit Logo'}
+                                                        {editingLogo ? (
+                                                            <>
+                                                                <X className="h-4 w-4" />
+                                                                Cancel
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Edit3 className="h-4 w-4" />
+                                                                Edit Logo
+                                                            </>
+                                                        )}
                                                     </button>
                                                 </div>
+                                            </div>
 
+                                            <div className="p-6">
                                                 <div className="flex items-center gap-6">
-                                                    {/* Logo Display */}
                                                     <div className="flex-shrink-0">
-                                                        <div className="w-24 h-24 rounded-lg border-2 border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
+                                                        <div className="w-32 h-32 rounded-2xl border-2 border-dashed border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center relative group">
                                                             {logoPreview || storeData.logoUrl ? (
                                                                 <img 
                                                                     src={logoPreview || storeData.logoUrl} 
-                                                                    alt="Store logo" 
-                                                                    className="w-full h-full object-cover"
-                                                                    onError={(e) => {
-                                                                        e.target.style.display = 'none';
-                                                                        e.target.nextSibling.style.display = 'flex';
-                                                                    }}
+                                                                    alt="Business logo" 
+                                                                    className="w-full h-full object-cover rounded-xl"
                                                                 />
                                                             ) : (
                                                                 <div className="text-gray-400 text-center">
-                                                                    <svg className="w-8 h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                                    </svg>
-                                                                    <span className="text-xs">No Logo</span>
+                                                                    <Building2 className="w-8 h-8 mx-auto mb-2" />
+                                                                    <span className="text-xs font-medium">No Logo</span>
                                                                 </div>
                                                             )}
-                                                            {/* Fallback for broken images */}
-                                                            {(logoPreview || storeData.logoUrl) && (
-                                                                <div className="text-gray-400 text-center hidden">
-                                                                    <svg className="w-8 h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                                    </svg>
-                                                                    <span className="text-xs">Failed to Load</span>
+                                                            {editingLogo && (
+                                                                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Camera className="w-6 h-6 text-white" />
                                                                 </div>
                                                             )}
                                                         </div>
                                                     </div>
 
-                                                    {/* Logo Upload Controls */}
                                                     <div className="flex-1">
                                                         {editingLogo ? (
                                                             <div className="space-y-4">
                                                                 <div>
                                                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                                        Select Logo Image
+                                                                        Upload Logo Image
                                                                     </label>
-                                                                    <input
-                                                                        type="file"
-                                                                        accept="image/*"
-                                                                        onChange={handleLogoChange}
-                                                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                                                        disabled={logoUploading}
-                                                                    />
+                                                                    <div className="relative">
+                                                                        <input
+                                                                            type="file"
+                                                                            accept="image/*"
+                                                                            onChange={handleLogoChange}
+                                                                            className="hidden"
+                                                                            id="logo-upload"
+                                                                            disabled={logoUploading}
+                                                                        />
+                                                                        <label
+                                                                            htmlFor="logo-upload"
+                                                                            className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl hover:border-gray-400 cursor-pointer transition-colors"
+                                                                        >
+                                                                            <Upload className="h-5 w-5 text-gray-500" />
+                                                                            <span className="text-gray-700">Click to upload or drag and drop</span>
+                                                                        </label>
+                                                                    </div>
                                                                     <p className="text-xs text-gray-500 mt-1">
-                                                                        PNG, JPG, GIF up to 5MB
+                                                                        PNG, JPG, GIF up to 5MB. Recommended: 400x400px
                                                                     </p>
                                                                 </div>
 
@@ -652,15 +733,18 @@ const AccountPage = () => {
                                                                         <button
                                                                             onClick={handleLogoUpload}
                                                                             disabled={logoUploading}
-                                                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                                                            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                                         >
                                                                             {logoUploading ? (
                                                                                 <>
-                                                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                                                                     Uploading...
                                                                                 </>
                                                                             ) : (
-                                                                                'Upload Logo'
+                                                                                <>
+                                                                                    <Upload className="h-4 w-4" />
+                                                                                    Upload Logo
+                                                                                </>
                                                                             )}
                                                                         </button>
                                                                     )}
@@ -669,209 +753,274 @@ const AccountPage = () => {
                                                                         <button
                                                                             onClick={handleLogoRemove}
                                                                             disabled={logoUploading}
-                                                                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                                                                            className="flex items-center gap-2 px-6 py-3 border border-red-300 text-red-600 font-medium rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50"
                                                                         >
-                                                                            Remove Logo
+                                                                            <X className="h-4 w-4" />
+                                                                            Remove
                                                                         </button>
                                                                     )}
                                                                 </div>
                                                             </div>
                                                         ) : (
                                                             <div>
-                                                                <p className="text-gray-700">
-                                                                    {storeData.logoUrl ? 'Logo is set and visible on your store page' : 'No logo uploaded yet'}
+                                                                <h4 className="font-semibold text-gray-900 mb-2">
+                                                                    {storeData.logoUrl ? 'Logo Active' : 'No Logo Uploaded'}
+                                                                </h4>
+                                                                <p className="text-gray-600 mb-4">
+                                                                    {storeData.logoUrl 
+                                                                        ? 'Your logo is live and visible across your business profile' 
+                                                                        : 'Upload a professional logo to strengthen your brand identity'
+                                                                    }
                                                                 </p>
-                                                                <p className="text-sm text-gray-500 mt-1">
-                                                                    A professional logo helps customers recognize your brand
-                                                                </p>
+                                                                <div className="flex items-center gap-2 text-sm">
+                                                                    {storeData.logoUrl ? (
+                                                                        <CheckCircle className="h-4 w-4 text-green-500" />
+                                                                    ) : (
+                                                                        <AlertCircle className="h-4 w-4 text-amber-500" />
+                                                                    )}
+                                                                    <span className={storeData.logoUrl ? 'text-green-600' : 'text-amber-600'}>
+                                                                        {storeData.logoUrl ? 'Logo configured' : 'Logo recommended'}
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
                                             </div>
+                                        </div>
 
-                                            {/* Store Information (Main Branch) */}
-                                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                                <div className="flex items-center justify-between mb-6">
-                                                    <div>
-                                                        <h3 className="text-xl font-semibold text-gray-900">Store Information</h3>
-                                                        <p className="text-sm text-gray-600 mt-1">This information serves as your main branch details</p>
+                                        {/* Business Information */}
+                                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-gray-200">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+                                                            <Store className="h-5 w-5 text-green-600" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-lg font-semibold text-gray-900">Business Information</h3>
+                                                            <p className="text-sm text-gray-600">Your main location details</p>
+                                                        </div>
                                                     </div>
                                                     <button
                                                         onClick={() => setEditingStore(!editingStore)}
-                                                        className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                                                            editingStore
+                                                                ? 'text-gray-600 hover:bg-gray-100'
+                                                                : 'text-green-600 hover:bg-green-50'
+                                                        }`}
                                                         disabled={loading}
                                                     >
-                                                        {editingStore ? 'Cancel' : 'Edit Store'}
+                                                        {editingStore ? (
+                                                            <>
+                                                                <X className="h-4 w-4" />
+                                                                Cancel
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Edit3 className="h-4 w-4" />
+                                                                Edit
+                                                            </>
+                                                        )}
                                                     </button>
                                                 </div>
+                                            </div>
 
+                                            <div className="p-6">
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <div className="space-y-4">
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Store Name</label>
-                                                            {editingStore ? (
-                                                                <input
-                                                                    type="text"
-                                                                    value={storeData.name}
-                                                                    onChange={(e) => setStoreData({...storeData, name: e.target.value})}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                />
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{merchantInfo.store?.name}</p>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Store Phone</label>
-                                                            {editingStore ? (
-                                                                <input
-                                                                    type="tel"
-                                                                    value={storeData.phoneNumber}
-                                                                    onChange={(e) => setStoreData({...storeData, phoneNumber: e.target.value})}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                />
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{merchantInfo.store?.phone_number || 'Not set'}</p>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Store Email</label>
-                                                            {editingStore ? (
-                                                                <input
-                                                                    type="email"
-                                                                    value={storeData.email}
-                                                                    onChange={(e) => setStoreData({...storeData, email: e.target.value})}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                />
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{merchantInfo.store?.primary_email || 'Not set'}</p>
-                                                            )}
-                                                        </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-700">Business Name</label>
+                                                        {editingStore ? (
+                                                            <input
+                                                                type="text"
+                                                                value={storeData.name}
+                                                                onChange={(e) => setStoreData({...storeData, name: e.target.value})}
+                                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                                                                disabled={loading}
+                                                            />
+                                                        ) : (
+                                                            <p className="text-gray-900 py-3 font-medium flex items-center">
+                                                                <Briefcase className="h-4 w-4 mr-2 text-gray-500" />
+                                                                {merchantInfo.store?.name || 'Not set'}
+                                                            </p>
+                                                        )}
                                                     </div>
-
-                                                    <div className="space-y-4">
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Opening Time</label>
-                                                            {editingStore ? (
-                                                                <input
-                                                                    type="time"
-                                                                    value={storeData.openingTime}
-                                                                    onChange={(e) => setStoreData({...storeData, openingTime: e.target.value})}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                />
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{merchantInfo.store?.opening_time || 'Not set'}</p>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Closing Time</label>
-                                                            {editingStore ? (
-                                                                <input
-                                                                    type="time"
-                                                                    value={storeData.closingTime}
-                                                                    onChange={(e) => setStoreData({...storeData, closingTime: e.target.value})}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                />
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{merchantInfo.store?.closing_time || 'Not set'}</p>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-                                                            {editingStore ? (
-                                                                <input
-                                                                    type="url"
-                                                                    value={storeData.websiteUrl}
-                                                                    onChange={(e) => setStoreData({...storeData, websiteUrl: e.target.value})}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                    placeholder="https://your-website.com"
-                                                                />
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{merchantInfo.store?.website_url || 'Not set'}</p>
-                                                            )}
-                                                        </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-700">Business Phone</label>
+                                                        {editingStore ? (
+                                                            <input
+                                                                type="tel"
+                                                                value={storeData.phoneNumber}
+                                                                onChange={(e) => setStoreData({...storeData, phoneNumber: e.target.value})}
+                                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                                                                disabled={loading}
+                                                            />
+                                                        ) : (
+                                                            <p className="text-gray-900 py-3 font-medium flex items-center">
+                                                                <Phone className="h-4 w-4 mr-2 text-gray-500" />
+                                                                {merchantInfo.store?.phone_number || 'Not set'}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-700">Business Email</label>
+                                                        {editingStore ? (
+                                                            <input
+                                                                type="email"
+                                                                value={storeData.email}
+                                                                onChange={(e) => setStoreData({...storeData, email: e.target.value})}
+                                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                                                                disabled={loading}
+                                                            />
+                                                        ) : (
+                                                            <p className="text-gray-900 py-3 font-medium flex items-center">
+                                                                <Mail className="h-4 w-4 mr-2 text-gray-500" />
+                                                                {merchantInfo.store?.primary_email || 'Not set'}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-700">Website</label>
+                                                        {editingStore ? (
+                                                            <input
+                                                                type="url"
+                                                                value={storeData.websiteUrl}
+                                                                onChange={(e) => setStoreData({...storeData, websiteUrl: e.target.value})}
+                                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                                                                disabled={loading}
+                                                                placeholder="https://your-website.com"
+                                                            />
+                                                        ) : (
+                                                            <p className="text-gray-900 py-3 font-medium flex items-center">
+                                                                <Globe className="h-4 w-4 mr-2 text-gray-500" />
+                                                                {merchantInfo.store?.website_url || 'Not set'}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
 
-                                                {/* Store Address */}
-                                                <div className="mt-4">
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Store Address</label>
+                                                {/* Operating Hours */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-700">Opening Time</label>
+                                                        {editingStore ? (
+                                                            <input
+                                                                type="time"
+                                                                value={storeData.openingTime}
+                                                                onChange={(e) => setStoreData({...storeData, openingTime: e.target.value})}
+                                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                                                                disabled={loading}
+                                                            />
+                                                        ) : (
+                                                            <p className="text-gray-900 py-3 font-medium flex items-center">
+                                                                <Clock className="h-4 w-4 mr-2 text-gray-500" />
+                                                                {merchantInfo.store?.opening_time || 'Not set'}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-700">Closing Time</label>
+                                                        {editingStore ? (
+                                                            <input
+                                                                type="time"
+                                                                value={storeData.closingTime}
+                                                                onChange={(e) => setStoreData({...storeData, closingTime: e.target.value})}
+                                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                                                                disabled={loading}
+                                                            />
+                                                        ) : (
+                                                            <p className="text-gray-900 py-3 font-medium flex items-center">
+                                                                <Clock className="h-4 w-4 mr-2 text-gray-500" />
+                                                                {merchantInfo.store?.closing_time || 'Not set'}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Address */}
+                                                <div className="mt-6 space-y-2">
+                                                    <label className="text-sm font-medium text-gray-700">Business Address</label>
                                                     {editingStore ? (
                                                         <textarea
                                                             value={storeData.location}
                                                             onChange={(e) => setStoreData({...storeData, location: e.target.value})}
                                                             rows={3}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors resize-none"
                                                             disabled={loading}
+                                                            placeholder="Enter your full business address"
                                                         />
                                                     ) : (
-                                                        <p className="text-gray-900 py-2">{merchantInfo.store?.location}</p>
+                                                        <p className="text-gray-900 py-3 font-medium flex items-start">
+                                                            <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5 flex-shrink-0" />
+                                                            {merchantInfo.store?.location || 'Not set'}
+                                                        </p>
                                                     )}
                                                 </div>
 
                                                 {/* Working Days */}
                                                 {editingStore && (
-                                                    <div className="mt-4">
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">Working Days</label>
-                                                        <div className="flex flex-wrap gap-2">
+                                                    <div className="mt-6 space-y-3">
+                                                        <label className="text-sm font-medium text-gray-700 flex items-center">
+                                                            <Calendar className="h-4 w-4 mr-2" />
+                                                            Operating Days
+                                                        </label>
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
                                                             {weekDays.map((day) => (
-                                                                <label key={day} className="flex items-center">
+                                                                <label key={day} className="flex items-center space-x-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                                                                     <input
                                                                         type="checkbox"
                                                                         checked={storeData.workingDays.includes(day)}
                                                                         onChange={() => handleStoreWorkingDaysChange(day)}
-                                                                        className="mr-2"
+                                                                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                                                                     />
-                                                                    <span className="text-sm">{day}</span>
+                                                                    <span className="text-sm font-medium text-gray-700">{day.slice(0, 3)}</span>
                                                                 </label>
                                                             ))}
                                                         </div>
                                                     </div>
                                                 )}
 
-                                                {/* Store Description */}
-                                                <div className="mt-4">
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Store Description</label>
+                                                {/* Description */}
+                                                <div className="mt-6 space-y-2">
+                                                    <label className="text-sm font-medium text-gray-700">Business Description</label>
                                                     {editingStore ? (
                                                         <textarea
                                                             value={storeData.description}
                                                             onChange={(e) => setStoreData({...storeData, description: e.target.value})}
-                                                            rows={3}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                            rows={4}
+                                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors resize-none"
                                                             disabled={loading}
-                                                            placeholder="Brief description of your store"
+                                                            placeholder="Describe your business, services, and what makes you unique"
                                                         />
                                                     ) : (
-                                                        <p className="text-gray-900 py-2">{merchantInfo.store?.description || 'No description set'}</p>
+                                                        <p className="text-gray-900 py-3 leading-relaxed">
+                                                            {merchantInfo.store?.description || 'No description provided'}
+                                                        </p>
                                                     )}
                                                 </div>
 
                                                 {editingStore && (
-                                                    <div className="flex gap-3 mt-6">
+                                                    <div className="flex gap-3 mt-8 pt-6 border-t border-gray-200">
                                                         <button 
                                                             onClick={handleStoreUpdate}
                                                             disabled={loading}
-                                                            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                                            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
                                                             {loading ? (
                                                                 <>
-                                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                                                     Updating...
                                                                 </>
                                                             ) : (
-                                                                'Update Store Info'
+                                                                <>
+                                                                    <Save className="h-4 w-4" />
+                                                                    Save Changes
+                                                                </>
                                                             )}
                                                         </button>
                                                         <button
                                                             onClick={() => {
                                                                 setEditingStore(false);
-                                                                // Reset store data
                                                                 if (merchantInfo.store) {
                                                                     setStoreData({
                                                                         name: merchantInfo.store.name || '',
@@ -888,7 +1037,7 @@ const AccountPage = () => {
                                                                 }
                                                             }}
                                                             disabled={loading}
-                                                            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                                                            className="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
                                                         >
                                                             Cancel
                                                         </button>
@@ -896,154 +1045,250 @@ const AccountPage = () => {
                                                 )}
 
                                                 {/* Info Banner */}
-                                                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                                    <div className="flex items-start">
-                                                        <div className="text-blue-500 mr-3 mt-0.5">
-                                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                                            </svg>
+                                                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                                                    <div className="flex items-start space-x-3">
+                                                        <div className="flex-shrink-0">
+                                                            <CheckCircle className="h-5 w-5 text-blue-500 mt-0.5" />
                                                         </div>
                                                         <div>
-                                                            <h4 className="text-sm font-medium text-blue-900">Main Branch Information</h4>
-                                                            <p className="text-sm text-blue-700 mt-1">
-                                                                Your store information automatically serves as your main branch. 
-                                                                Any changes here will update your main branch details across the system.
+                                                            <h4 className="text-sm font-semibold text-blue-900 mb-1">Main Location</h4>
+                                                            <p className="text-sm text-blue-700">
+                                                                This information represents your primary business location and serves as your main branch across all systems.
                                                             </p>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
+                                        </div>
 
-                                            {/* Branch Management Component */}
-                                            {merchantInfo.store && (
-                                                <BranchManagement 
-                                                    storeId={merchantInfo.store.id}
-                                                    onBranchesUpdate={handleBranchesUpdate}
-                                                />
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            )}
+                                        {/* Branch Management Component */}
+                                        {merchantInfo.store && (
+                                            <BranchManagement 
+                                                storeId={merchantInfo.store.id}
+                                                onBranchesUpdate={handleBranchesUpdate}
+                                            />
+                                        )}
+                                    </div>
+                                )}
 
-                            {/* Security Tab */}
-                            {activeTab === 2 && (
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                    <h3 className="text-xl font-semibold text-gray-900 mb-6">Security Settings</h3>
+                                {/* Security Tab */}
+                                {activeTab === 2 && (
                                     <div className="space-y-6">
-                                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                            <div>
-                                                <h4 className="font-medium text-gray-900">Two-Factor Authentication</h4>
-                                                <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
+                                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                            <div className="bg-gradient-to-r from-amber-50 to-orange-50 px-6 py-4 border-b border-gray-200">
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                                                        <Shield className="h-5 w-5 text-amber-600" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-900">Security Settings</h3>
+                                                        <p className="text-sm text-gray-600">Manage your account security preferences</p>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input type="checkbox" className="sr-only peer" defaultChecked />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                            </label>
-                                        </div>
+                                            <div className="p-6 space-y-6">
+                                                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                                                    <div className="flex items-center space-x-4">
+                                                        <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+                                                            <Shield className="h-5 w-5 text-green-600" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-semibold text-gray-900">Two-Factor Authentication</h4>
+                                                            <p className="text-sm text-gray-600">Extra security for your account</p>
+                                                        </div>
+                                                    </div>
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    </label>
+                                                </div>
 
-                                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                            <div>
-                                                <h4 className="font-medium text-gray-900">Password</h4>
-                                                <p className="text-sm text-gray-600">Last changed 30 days ago</p>
-                                            </div>
-                                            <button className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                                Change Password
-                                            </button>
-                                        </div>
+                                                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                                                    <div className="flex items-center space-x-4">
+                                                        <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                                            <Settings className="h-5 w-5 text-blue-600" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-semibold text-gray-900">Password</h4>
+                                                            <p className="text-sm text-gray-600">Last changed 30 days ago</p>
+                                                        </div>
+                                                    </div>
+                                                    <button className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium">
+                                                        Change
+                                                    </button>
+                                                </div>
 
-                                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                            <div>
-                                                <h4 className="font-medium text-gray-900">Login Notifications</h4>
-                                                <p className="text-sm text-gray-600">Get notified of new login attempts</p>
+                                                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                                                    <div className="flex items-center space-x-4">
+                                                        <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                                                            <Mail className="h-5 w-5 text-purple-600" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-semibold text-gray-900">Login Notifications</h4>
+                                                            <p className="text-sm text-gray-600">Get notified of new login attempts</p>
+                                                        </div>
+                                                    </div>
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    </label>
+                                                </div>
                                             </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input type="checkbox" className="sr-only peer" defaultChecked />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                            </label>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {/* Subscription Tab */}
-                            {activeTab === 3 && (
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                    <h3 className="text-xl font-semibold text-gray-900 mb-6">Subscription & Billing</h3>
+                                {/* Billing Tab */}
+                                {activeTab === 3 && (
                                     <div className="space-y-6">
-                                        <div className="p-6 border border-gray-200 rounded-lg">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div>
-                                                    <h4 className="text-lg font-medium text-gray-900">Current Plan</h4>
-                                                    <p className="text-sm text-gray-600">Professional Plan</p>
-                                                </div>
-                                                <span className="px-3 py-1 text-sm font-medium text-green-800 bg-green-100 rounded-full">
-                                                    Active
-                                                </span>
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                                <div>
-                                                    <span className="font-medium text-gray-700">Monthly Fee:</span>
-                                                    <p className="text-gray-900">$49.99</p>
-                                                </div>
-                                                <div>
-                                                    <span className="font-medium text-gray-700">Next Billing:</span>
-                                                    <p className="text-gray-900">Aug 18, 2025</p>
-                                                </div>
-                                                <div>
-                                                    <span className="font-medium text-gray-700">Payment Method:</span>
-                                                    <p className="text-gray-900">•••• •••• •••• 1234</p>
+                                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                                                        <CreditCard className="h-5 w-5 text-purple-600" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-900">Subscription & Billing</h3>
+                                                        <p className="text-sm text-gray-600">Manage your plan and payment details</p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-3 mt-4">
-                                                <button className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                                    Upgrade Plan
-                                                </button>
-                                                <button className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-                                                    Update Payment
-                                                </button>
+                                            <div className="p-6">
+                                                <div className="border border-gray-200 rounded-xl p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
+                                                    <div className="flex items-start justify-between mb-6">
+                                                        <div>
+                                                            <h4 className="text-xl font-bold text-gray-900">Professional Plan</h4>
+                                                            <p className="text-gray-600">Full access to all features</p>
+                                                        </div>
+                                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                                            <CheckCircle className="h-4 w-4 mr-1" />
+                                                            Active
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                                        <div className="text-center p-4 bg-white bg-opacity-50 rounded-lg">
+                                                            <div className="text-2xl font-bold text-gray-900">$49.99</div>
+                                                            <div className="text-sm text-gray-600">Monthly Fee</div>
+                                                        </div>
+                                                        <div className="text-center p-4 bg-white bg-opacity-50 rounded-lg">
+                                                            <div className="text-2xl font-bold text-gray-900">Aug 18</div>
+                                                            <div className="text-sm text-gray-600">Next Billing</div>
+                                                        </div>
+                                                        <div className="text-center p-4 bg-white bg-opacity-50 rounded-lg">
+                                                            <div className="text-2xl font-bold text-gray-900">••••1234</div>
+                                                            <div className="text-sm text-gray-600">Payment Method</div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="flex gap-4">
+                                                        <button className="flex-1 px-6 py-3 bg-purple-600 text-white font-medium rounded-xl hover:bg-purple-700 transition-colors">
+                                                            Upgrade Plan
+                                                        </button>
+                                                        <button className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors">
+                                                            Update Payment
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {/* Activity Tab */}
-                            {activeTab === 4 && (
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                    <h3 className="text-xl font-semibold text-gray-900 mb-6">Account Activity</h3>
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                <div>
-                                                    <p className="font-medium text-gray-900">Login from Chrome</p>
-                                                    <p className="text-sm text-gray-600">Today at 2:30 PM • IP: 192.168.1.1</p>
+                                {/* Activity Tab */}
+                                {activeTab === 4 && (
+                                    <div className="space-y-6">
+                                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                            <div className="bg-gradient-to-r from-red-50 to-pink-50 px-6 py-4 border-b border-gray-200">
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
+                                                        <Activity className="h-5 w-5 text-red-600" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-900">Account Activity</h3>
+                                                        <p className="text-sm text-gray-600">Recent actions and security events</p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                                <div>
-                                                    <p className="font-medium text-gray-900">Store information updated</p>
-                                                    <p className="text-sm text-gray-600">Yesterday at 4:15 PM</p>
+                                            <div className="p-6">
+                                                <div className="space-y-4">
+                                                    <div className="flex items-start space-x-4 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                                                        <div className="flex-shrink-0">
+                                                            <div className="w-3 h-3 bg-green-500 rounded-full mt-2"></div>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-sm font-medium text-gray-900">Successful Login</p>
+                                                                <p className="text-xs text-gray-500">2 minutes ago</p>
+                                                            </div>
+                                                            <p className="text-sm text-gray-600">Chrome on Windows • IP: 192.168.1.1</p>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-start space-x-4 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                                                        <div className="flex-shrink-0">
+                                                            <div className="w-3 h-3 bg-blue-500 rounded-full mt-2"></div>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-sm font-medium text-gray-900">Profile Updated</p>
+                                                                <p className="text-xs text-gray-500">Yesterday</p>
+                                                            </div>
+                                                            <p className="text-sm text-gray-600">Business information was modified</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-start space-x-4 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                                                        <div className="flex-shrink-0">
+                                                            <div className="w-3 h-3 bg-purple-500 rounded-full mt-2"></div>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-sm font-medium text-gray-900">New Branch Added</p>
+                                                                <p className="text-xs text-gray-500">2 days ago</p>
+                                                            </div>
+                                                            <p className="text-sm text-gray-600">Downtown location was successfully created</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-start space-x-4 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                                                        <div className="flex-shrink-0">
+                                                            <div className="w-3 h-3 bg-orange-500 rounded-full mt-2"></div>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-sm font-medium text-gray-900">Payment Processed</p>
+                                                                <p className="text-xs text-gray-500">1 week ago</p>
+                                                            </div>
+                                                            <p className="text-sm text-gray-600">Monthly subscription fee of $49.99</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-start space-x-4 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                                                        <div className="flex-shrink-0">
+                                                            <div className="w-3 h-3 bg-gray-400 rounded-full mt-2"></div>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-sm font-medium text-gray-900">Password Changed</p>
+                                                                <p className="text-xs text-gray-500">2 weeks ago</p>
+                                                            </div>
+                                                            <p className="text-sm text-gray-600">Account password was successfully updated</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                                                <div>
-                                                    <p className="font-medium text-gray-900">New branch added</p>
-                                                    <p className="text-sm text-gray-600">2 days ago at 10:22 AM</p>
+
+                                                <div className="mt-6 text-center">
+                                                    <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                                                        View All Activity
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

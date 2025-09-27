@@ -5,11 +5,11 @@ import LoginPage from './pages/auth/Login'
 import ServicesPage from './pages/services/Service'
 import OfferPage from './pages/offers/Offers'
 import CreateStore from './pages/stores/CreateStore'
-import Calendar from './pages/Calendar'
+// import Calendar from './pages/Calendar'
 import Page404 from './pages/Page404'
 import ServiceBookings from './pages/bookings/ServiceBookings'
 import OfferBookings from './pages/bookings/OfferBookings'
-import BookingDetails from './pages/bookings/BookingDetails'
+import BookingDetails from './pages/bookings/BookingDetailsModal.jsx'
 import StaffManagement from './pages/staff/StaffManagement'
 import Socials from './pages/socials/Socials'
 import Reviews from './pages/reviews/Reviews'
@@ -19,11 +19,11 @@ import DynamicFormPage from './pages/services/DynamicFormPage'
 import Analytics from './pages/analytics/Analytics'
 import BillingPage from './pages/account/Billings'
 import Invoice from './pages/clients'
-import clients from './pages/account/Invoice'
+// import clients from './pages/account/Invoice'
 import MerchantChatInterface from './pages/dashboard/MerchantChatInterface';
 import ClientsPage from './pages/clients';
 import ServiceRequests from './pages/servicereq/serviceRequests';
-import BookingView from './pages/bookings/BookingView';
+import BookingView from './pages/bookings/BookingView'; 
 
 // In your dashboard
 
@@ -40,7 +40,7 @@ const AppRoutes = () => {
       <Route path='/dashboard/dynamic-form/:id' element={<DynamicFormPage />} />
       <Route path='/dashboard/analytics' element={<Analytics />} />
       <Route path='/dashboard/offers' element={<OfferPage />} />
-      <Route path='/dashboard/calendar' element={<Calendar />} />
+      {/* <Route path='/dashboard/calendar' element={<Calendar />} /> */}
       <Route path='/stores/create' element={<CreateStore />} />
       <Route path="/dashboard/service-bookings" element={<ServiceBookings />} />
       <Route path="/dashboard/offer-bookings" element={<OfferBookings />} />
@@ -53,7 +53,7 @@ const AppRoutes = () => {
       <Route path="/dashboard/account" element={<AccountPage />} />
       <Route path="/Clients" element={<ClientsPage />} />
       <Route path="/dashboard/serviceRequests" element={<ServiceRequests />} />
-      <Route path="/dashboard/bookings/:bookingId/view" element={<BookingView />} />
+      <Route path="/dashboard/bookings/:id/view" element={<BookingView />} />
       <Route path="*" element={<Page404 />} />
     </Routes>
   )
